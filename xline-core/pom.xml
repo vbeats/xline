@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-core</artifactId>
+    <name>xline-core</name>
+    <description>核心模块：节点模型、struct 单向拓扑、事件总线、数据处理器契约、各类节点配置载体与全工程基础依赖
+    </description>
+
+    <dependencies>
+        <!--
+            基础依赖：全工程公用，统一由 core 引入向下传递，各模块不必重复声明。
+            版本在根 POM 的 dependencyManagement 中集中管理。
+        -->
+
+        <!-- Netty：时间轮、缓冲区、线程模型等基础能力 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+        </dependency>
+
+        <!-- Hutool：节点属性拷贝与通用工具（对齐 vline 用法） -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+        </dependency>
+
+        <!-- Fastjson2：JSON 序列化 -->
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+        </dependency>
+
+        <!-- Guava：集合、缓存等基础工具 -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+        </dependency>
+    </dependencies>
+</project>

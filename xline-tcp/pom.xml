@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-tcp</artifactId>
+    <name>xline-tcp</name>
+    <description>TCP 节点支持：socket 监听 / 连接与数据收发，接入 xline 单向数据流</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-core</artifactId>
+        </dependency>
+
+        <!-- 通信基于 JDK socket，无需任何第三方依赖 -->
+    </dependencies>
+</project>

@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.csf.xline</groupId>
+    <artifactId>xline</artifactId>
+    <!-- CI Friendly Versions：全工程版本由 ${revision} 单点定义，子模块 parent 引用同一属性 -->
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <name>xline</name>
+    <description>xline 基础架构：Maven 多模块，按 JDK 自动切换 SpringBoot 2.7 /
+        4.x，节点式拓扑数据流与多数据库按配置条件装配
+    </description>
+
+    <modules>
+        <module>xline-core</module>
+        <module>xline-db-mysql</module>
+        <module>xline-db-postgresql</module>
+        <module>xline-db-sqlite</module>
+        <module>xline-db-sqlserver-jtds</module>
+        <module>xline-db-sqlserver-msssql</module>
+        <module>xline-tcp</module>
+        <module>xline-http</module>
+        <module>xline-app</module>
+    </modules>
+
+    <properties>
+        <!-- ==================== 工程版本（唯一定义处） ==================== -->
+        <!--
+            Maven CI Friendly Versions：父 POM 的 <version> 与各子模块的 parent.version
+            均引用 ${revision}，改版本只需改这一处。
+            构建时可用 -Drevision=x.y.z 覆盖（如 CI 打正式版）。
+        -->
+        <revision>1.0.0</revision>
+
+        <!-- ==================== 构建基础 ==================== -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- ==================== 双 JDK 分支默认值（与 jdk21 profile 一致） ==================== -->
+        <!-- 以下三项由 jdk8 / jdk21 profile 按运行 JDK 覆盖，此处为兜底默认值 -->
+        <spring-boot.version>4.1.1</spring-boot.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <!-- JDK 专属源码目录名：src/main/${jdk.source.dir}，由 profile 决定加入哪一个 -->
+        <jdk.source.dir>java-jdk21</jdk.source.dir>
+
+        <!--
+            Web MVC starter 名称：SpringBoot 4 模块化后更名为 spring-boot-starter-webmvc，
+            SpringBoot 2.7 仍为 spring-boot-starter-web，由 profile 按分支切换。
+        -->
+        <web.starter.artifactId>spring-boot-starter-webmvc</web.starter.artifactId>
+
+        <!-- ==================== 依赖版本（对齐 vline 各自分支的最新线） ==================== -->
+        <mybatis-plus.version>3.5.18</mybatis-plus.version>
+        <!-- MyBatis-Plus starter 名称：SpringBoot 4.x 需专用 starter，由 profile 切换 -->
+        <mybatis-plus.starter.artifactId>mybatis-plus-spring-boot4-starter</mybatis-plus.starter.artifactId>
+        <hutool.version>5.8.47</hutool.version>
+        <druid.version>1.2.28</druid.version>
+        <flyway.version>13.7.0</flyway.version>
+        <mysql.version>26.7.0</mysql.version>
+        <postgresql.version>42.7.13</postgresql.version>
+        <sqlite.version>3.53.4.0</sqlite.version>
+        <sqlserver.version>13.6.0.jre11</sqlserver.version>
+        <jtds.version>1.3.1</jtds.version>
+
+        <!-- ==================== 基础依赖（由 xline-core 统一提供） ==================== -->
+        <netty.version>4.2.19.Final</netty.version>
+        <fastjson2.version>2.0.57</fastjson2.version>
+        <guava.version>33.4.8-jre</guava.version>
+        <forest.version>1.7.6</forest.version>
+        <!-- Forest starter 名称：Boot 1/2 与 Boot 3+ 是两个 artifact，由 profile 切换 -->
+        <forest.starter.artifactId>forest-spring-boot3-starter</forest.starter.artifactId>
+
+        <!-- ==================== 插件版本 ==================== -->
+        <build-helper-maven-plugin.version>3.6.2</build-helper-maven-plugin.version>
+        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <flatten-maven-plugin.version>1.7.3</flatten-maven-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- SpringBoot BOM：版本由激活的 JDK profile 决定 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- ==================== 工程内模块 ==================== -->
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-mysql</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-postgresql</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-sqlite</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-sqlserver-jtds</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-sqlserver-msssql</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-tcp</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-http</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- ==================== 第三方（版本按 profile 差异化） ==================== -->
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.lmax</groupId>
+                <artifactId>disruptor</artifactId>
+                <version>${disruptor.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${mysql.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial</groupId>
+                <artifactId>sqlite-jdbc</artifactId>
+                <version>${sqlite.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>${sqlserver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sourceforge.jtds</groupId>
+                <artifactId>jtds</artifactId>
+                <version>${jtds.version}</version>
+            </dependency>
+            <!-- MyBatis-Plus：仅应用按需引入，starter 名称由 profile 切换 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!-- 基础依赖：版本统一在这里管理，由 xline-core 引入并向下传递 -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <!--
+                Forest：声明式 HTTP 框架。
+                starter 名称按分支切换（Boot 1/2 与 Boot 3+ 是两个 artifact），
+                两者均传递 forest-core；此处同时登记原生核心包版本以保持依赖可控。
+                注意：starter 自身硬依赖 spring-boot 3.1.4，须由本工程的 BOM 覆盖
+                （已验证解析结果为当前分支的 spring-boot 版本）。
+            -->
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-core</artifactId>
+                <version>${forest.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-spring-boot-starter</artifactId>
+                <version>${forest.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-spring-boot3-starter</artifactId>
+                <version>${forest.version}</version>
+            </dependency>
+            <!-- anyline：数据源注册与库操作（vline 同款），版本按 profile 切换 jdk8 / jdk21 构建 -->
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-environment-spring-data-jdbc</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-data-jdbc-mysql</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-data-jdbc-postgresql</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-data-jdbc-sqlite</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-data-jdbc-mssql</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- ==================== 公共依赖：全模块继承 ==================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- 配置属性元数据处理器，编译期生成 spring-configuration-metadata.json -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                CI Friendly Versions 配套：install / deploy 前把 POM 中的 ${revision} 展开为实际版本。
+                否则仓库中 POM 的 parent.version 会残留 ${revision} 字面量，下游工程无法解析。
+                resolveCiFriendliesOnly 只替换版本占位符，保留 POM 原有结构（如 parent、modules）。
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 按激活的 JDK profile 追加专属源码目录：src/main/java-jdk8 或 src/main/java-jdk21 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-jdk-specific-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/main/${jdk.source.dir}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 统一按 profile 指定的 release 编译，源码主体保持 Java 8 语法 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <!-- 保留方法参数名，Spring MVC 依赖反射获取未加注解的参数名 -->
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- ========================================================================
+             JDK 1.8 ~ 20 分支：SpringBoot 2.7 依赖栈，编译到 release 8
+             源码目录追加 src/main/java-jdk8
+             ======================================================================== -->
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>[1.8,21)</jdk>
+            </activation>
+            <properties>
+                <spring-boot.version>2.7.18</spring-boot.version>
+                <maven.compiler.release>8</maven.compiler.release>
+                <jdk.source.dir>java-jdk8</jdk.source.dir>
+                <!-- SpringBoot 2.7 的 Web starter 仍名为 spring-boot-starter-web -->
+                <web.starter.artifactId>spring-boot-starter-web</web.starter.artifactId>
+                <!-- 该分支取仍支持 Java 8 的最新版本线 -->
+                <anyline.version>8.7.6-20261020</anyline.version>
+                <disruptor.version>3.4.4</disruptor.version>
+                <flyway.version>9.22.3</flyway.version>
+                <mysql.version>8.4.0</mysql.version>
+                <postgresql.version>42.7.13</postgresql.version>
+                <!-- sqlite-jdbc 3.42+ 起要求 Java 11+，Java 8 线停在 3.41.x -->
+                <sqlite.version>3.41.2.2</sqlite.version>
+                <sqlserver.version>13.6.0.jre8</sqlserver.version>
+                <mybatis-plus.starter.artifactId>mybatis-plus-boot-starter</mybatis-plus.starter.artifactId>
+                <forest.starter.artifactId>forest-spring-boot-starter</forest.starter.artifactId>
+            </properties>
+            <dependencies>
+
+                <!-- anyline 运行期使用的 Jackson 2 线，版本由 SpringBoot 2.7 BOM 统一管理 -->
+                <dependency>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>jackson-datatype-jsr310</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <!-- ========================================================================
+             JDK 21+ 分支：SpringBoot 4.x 依赖栈，编译到 release 21
+             源码目录追加 src/main/java-jdk21（可使用虚拟线程等 JDK21 特性）
+             ======================================================================== -->
+        <profile>
+            <id>jdk21</id>
+            <!--
+                两个 profile 均按运行 JDK 自动激活，互斥关系由 JDK 版本本身保证：
+                JDK 21 及以上只会命中 [21,)，JDK 1.8~20 只会命中 [1.8,21)。
+                需要在高版本 JDK 上强制产出 JDK8 分支时，使用 Maven 的反激活语法：
+                mvn -P '!jdk21,jdk8' clean install
+            -->
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <properties>
+                <spring-boot.version>4.1.1</spring-boot.version>
+                <maven.compiler.release>21</maven.compiler.release>
+                <jdk.source.dir>java-jdk21</jdk.source.dir>
+                <!-- SpringBoot 4 模块化后 Web MVC starter 更名为 spring-boot-starter-webmvc -->
+                <web.starter.artifactId>spring-boot-starter-webmvc</web.starter.artifactId>
+                <anyline.version>17.7.6-20261020</anyline.version>
+                <!-- anyline 运行期依赖 Jackson 2 线，SpringBoot 4.x 只带 Jackson 3，此处补齐 -->
+                <jackson.version>2.22.3</jackson.version>
+                <disruptor.version>4.0.0</disruptor.version>
+                <flyway.version>13.7.0</flyway.version>
+                <mysql.version>26.7.0</mysql.version>
+                <postgresql.version>42.7.13</postgresql.version>
+                <sqlite.version>3.53.4.0</sqlite.version>
+                <sqlserver.version>13.6.0.jre11</sqlserver.version>
+                <mybatis-plus.starter.artifactId>mybatis-plus-spring-boot4-starter</mybatis-plus.starter.artifactId>
+                <forest.starter.artifactId>forest-spring-boot3-starter</forest.starter.artifactId>
+            </properties>
+            <dependencies>
+
+                <!--
+                    anyline 运行期依赖 Jackson 2（com.fasterxml.jackson.*）。
+                    SpringBoot 4.x 只带 Jackson 3（tools.jackson.*，vline 亦单独引入），
+                    两者包名不同互不影响，此处补齐 anyline 所需的 Jackson 2 线。
+                -->
+                <dependency>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                    <version>${jackson.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>jackson-datatype-jsr310</artifactId>
+                    <version>${jackson.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+</project>

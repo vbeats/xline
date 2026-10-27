@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-http</artifactId>
+    <name>xline-http</name>
+    <description>HTTP 节点支持：由 Forest 实现声明式 HTTP 请求，接入 xline 单向数据流</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-core</artifactId>
+        </dependency>
+
+        <!--
+            Forest Spring Boot starter：自动初始化全局 Forest 配置（forest.* 配置项），
+            并传递引入 forest-core（HTTP 能力本体）与 forest-spring。
+            starter 名称按分支切换：
+              JDK 21（SpringBoot 3 / 4）  forest-spring-boot3-starter
+              JDK 1.8（SpringBoot 1 / 2） forest-spring-boot-starter
+            JSON 由 core 引入的 Fastjson2 提供（Forest 自 1.5.36 起支持 Fastjson2）。
+        -->
+        <dependency>
+            <groupId>com.dtflys.forest</groupId>
+            <artifactId>${forest.starter.artifactId}</artifactId>
+        </dependency>
+    </dependencies>
+</project>

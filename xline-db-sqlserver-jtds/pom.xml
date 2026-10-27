@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-db-sqlserver-jtds</artifactId>
+    <name>xline-db-sqlserver-jtds</name>
+    <description>SQL Server 节点支持（jTDS 驱动）：jTDS + anyline 数据源适配器 + 节点初始化</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-core</artifactId>
+        </dependency>
+
+        <!-- 连接池与数据库迁移：数据库模块专用，不进入 core 等公共依赖 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <!-- anyline：数据源注册环境（vline 同款），由各数据库模块自行引入 -->
+        <dependency>
+            <groupId>org.anyline</groupId>
+            <artifactId>anyline-environment-spring-data-jdbc</artifactId>
+        </dependency>
+
+        <!-- jTDS：开源 SQL Server 驱动，适用于需兼容旧版 SQL Server 的场景 -->
+        <dependency>
+            <groupId>net.sourceforge.jtds</groupId>
+            <artifactId>jtds</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.anyline</groupId>
+            <artifactId>anyline-data-jdbc-mssql</artifactId>
+        </dependency>
+    </dependencies>
+</project>

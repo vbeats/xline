@@ -1,0 +1,48 @@
+server:
+  port: 10010
+  shutdown: graceful
+
+spring:
+  application:
+    name: xline
+  flyway:
+    # 迁移由 xline 在节点初始化时按 flyway 开关执行；
+    # 关闭全局 Flyway：它会在节点就绪前从路由数据源取连接（jdk8 分支会启动失败）
+    enabled: false
+
+logging:
+  config: classpath:logback-xline.xml
+
+forest:
+  async-mode: platform
+  max-connections: 1000
+  max-route-connections: 500
+  max-request-queue-size: 200
+  max-async-thread-size: 300
+  max-async-queue-size: 200
+  connect-timeout: 3000
+  read-timeout: 5000
+  max-retry-count: 0
+  ssl-protocol: TLS
+  log-enabled: true
+  log-request: true
+  log-response-content: true
+  log-response-status: true
+  log-request-headers: false
+  log-response-headers: false
+
+xline:
+  nodes:
+    - name: db1
+      mssql:
+        host: 192.168.1.85
+        port: 1433
+        database-name: test
+        username: sa
+        password: 123456
+        encrypt: false
+        trust-server-certificate: true
+        flyway: false
+  struct:
+    db1:
+

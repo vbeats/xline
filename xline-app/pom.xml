@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-app</artifactId>
+    <name>xline-app</name>
+    <description>可启动应用模块：用于运行验证节点初始化与数据流推送</description>
+
+    <dependencies>
+        <!--
+            Web MVC：SpringBoot 4 起 starter 更名为 spring-boot-starter-webmvc，
+            2.7 仍为 spring-boot-starter-web，由 ${web.starter.artifactId} 按分支切换。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>${web.starter.artifactId}</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-core</artifactId>
+        </dependency>
+
+        <!--
+            需要的节点模块按需引入：未引入的模块其节点类型不会被初始化。
+            SQL Server 有两个驱动子模块，二者选其一引入：
+              xline-db-sqlserver-msssql    微软官方 mssql-jdbc 驱动
+              xline-db-sqlserver-jtds      jTDS 开源驱动
+        -->
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-mysql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-sqlite</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-sqlserver-jtds</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-tcp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-http</artifactId>
+        </dependency>
+
+        <!-- ORM 按需引入：starter 名称按分支切换（SpringBoot 4.x 需专用 starter） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>${mybatis-plus.starter.artifactId}</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

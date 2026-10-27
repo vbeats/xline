@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-db-sqlite</artifactId>
+    <name>xline-db-sqlite</name>
+    <description>SQLite 节点支持：驱动 + anyline 数据源适配器 + 节点初始化</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-core</artifactId>
+        </dependency>
+
+        <!-- 连接池与数据库迁移：数据库模块专用，不进入 core 等公共依赖 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <!-- anyline：数据源注册环境（vline 同款），由各数据库模块自行引入 -->
+        <dependency>
+            <groupId>org.anyline</groupId>
+            <artifactId>anyline-environment-spring-data-jdbc</artifactId>
+        </dependency>
+
+        <!-- SQLite JDBC 驱动，版本由激活的 JDK profile 决定（Java 8 线停在 3.41.x） -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.anyline</groupId>
+            <artifactId>anyline-data-jdbc-sqlite</artifactId>
+        </dependency>
+    </dependencies>
+</project>
