@@ -18,6 +18,7 @@
 | `xline-db-sqlserver-jtds` | SQL Server 节点（jTDS 驱动） |
 | `xline-tcp` | TCP 节点（JDK socket） |
 | `xline-http` | HTTP 节点（Forest） |
+| `xline-serial-port` | 串口节点（jSerialComm，232 / 485） |
 | `xline-app` | 可启动应用（默认端口 10010，不提供任何 Web 接口） |
 
 **不引入某个节点模块，对应类型的节点就永远不会被初始化**；SQL Server 的两个驱动模块二选一引入。
@@ -138,12 +139,57 @@ String url = node.url("/user/list");                 // 仅拼接 base-url + pat
 
 响应非 2xx 时 Forest 抛 `ForestNetworkException`，可在接口上用 `@SuccessWhen` 自定义成功条件。
 
+## 串口节点
+
+串口既是数据源头（读到字节推向下游），也是数据出口（把上游数据写入串口）。
+
+```yaml
+xline:
+  nodes:
+    - name: c1
+      serial-port:
+        device: COM1                # Windows 为 COM1，Linux / macOS 为 /dev/ttyS0
+        baud-rate: 9600             # 默认 115200
+        data-bits: 8                # 默认 8
+        stop-bits: 1                # 默认 1
+        parity: 0                   # 0 无 / 1 奇 / 2 偶 / 3 MARK / 4 SPACE，默认 0
+        use-rs485-mode: false       # 默认 false
+        reconnect: true             # 打开失败或串口拔出后自动重开，默认 true
+        reconnect-interval-millis: 3000
+        charset: UTF-8              # 上游推送文本数据时按此编码写出
+    - name: c2
+      serial-port:
+        device: COM2
+  struct:
+    c1:                             # 两个方向各配一条边，即成对串口双向转发
+      - c2
+    c2:
+      - c1
+```
+
+- **串口 → 下游**：读到字节即以本节点为源头推给下游（数据为 `byte[]`）；
+- **上游 → 串口**：有业务处理器时由 `SerialPortDataHandler.rec` 决定；
+  **未注册处理器时节点自动把原始字节写入串口** —— 成对串口无需任何业务代码即可双向转发；
+- 收发原始数据统一以**大写十六进制**记录（`01AB0C`），避免非 ASCII 字节打印成乱码。
+
+串口不存在、被占用或被拔掉时不阻断启动：记录告警后由后台线程按 `reconnect` 重开。
+需要参与业务时注册处理器（Bean 名与节点名一致即可按名匹配）：
+
+```java
+@Component("c1")
+public class C1Handler implements SerialPortDataHandler {
+    @Override public void init(SerialPortNode node) { }
+    @Override public void rec(SerialPortNode node, Object data) { node.send(data); }   // 转发到串口
+    @Override public void destroy(SerialPortNode node) { }
+}
+```
+
 ## 配置项一览
 
 | 配置 | 说明 |
 | --- | --- |
 | `xline.nodes[].name` | 节点名，用于 `struct`、处理器匹配与数据源注册 |
-| `xline.nodes[].<类型段>` | 可选 `mysql` / `postgresql` / `sqlite` / `mssql` / `tcp` / `http`，重复配置不同类型会报错 |
+| `xline.nodes[].<类型段>` | 可选 `mysql` / `postgresql` / `sqlite` / `mssql` / `tcp` / `http` / `serial-port`，重复配置不同类型会报错 |
 | `xline.struct` | 单向拓扑：key 上游，value 下游列表 |
 | `forest.*` | Forest 全局配置（引入 `xline-http` 时生效） |
 | `spring.flyway.enabled` | 必须为 `false`：迁移由节点按 `flyway` 开关执行 |

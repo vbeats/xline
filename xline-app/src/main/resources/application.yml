@@ -43,6 +43,20 @@ xline:
         encrypt: false
         trust-server-certificate: true
         flyway: false
+    # 串口节点：不注册业务处理器时，节点自动把读到的字节转发给下游、把上游数据写入串口
+    # - name: c1
+    #   serial-port:
+    #     device: COM1
+    #     baud-rate: 9600
+    # - name: c2
+    #   serial-port:
+    #     device: COM2
+    #     baud-rate: 9600
   struct:
     db1:
+    # 成对串口两个方向各配一条边，即可双向转发（c1 → c2、c2 → c1）
+    # c1:
+    #   - c2
+    # c2:
+    #   - c1
 

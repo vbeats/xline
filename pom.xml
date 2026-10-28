@@ -24,6 +24,7 @@
         <module>xline-db-sqlserver-msssql</module>
         <module>xline-tcp</module>
         <module>xline-http</module>
+        <module>xline-serial-port</module>
         <module>xline-app</module>
     </modules>
 
@@ -73,6 +74,8 @@
         <forest.version>1.7.6</forest.version>
         <!-- Forest starter 名称：Boot 1/2 与 Boot 3+ 是两个 artifact，由 profile 切换 -->
         <forest.starter.artifactId>forest-spring-boot3-starter</forest.starter.artifactId>
+        <!-- jSerialComm：串口通信库，两个 JDK 分支共用同一版本 -->
+        <jserialcomm.version>2.11.4</jserialcomm.version>
 
         <!-- ==================== 插件版本 ==================== -->
         <build-helper-maven-plugin.version>3.6.2</build-helper-maven-plugin.version>
@@ -130,6 +133,11 @@
             <dependency>
                 <groupId>com.csf.xline</groupId>
                 <artifactId>xline-http</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-serial-port</artifactId>
                 <version>${revision}</version>
             </dependency>
 
@@ -229,7 +237,13 @@
                 <artifactId>forest-spring-boot3-starter</artifactId>
                 <version>${forest.version}</version>
             </dependency>
-            <!-- anyline：数据源注册与库操作（vline 同款），版本按 profile 切换 jdk8 / jdk21 构建 -->
+            <!-- jSerialComm：串口通信（由 xline-serial-port 引入） -->
+        <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+            <version>${jserialcomm.version}</version>
+        </dependency>
+        <!-- anyline：数据源注册与库操作（vline 同款），版本按 profile 切换 jdk8 / jdk21 构建 -->
             <dependency>
                 <groupId>org.anyline</groupId>
                 <artifactId>anyline-environment-spring-data-jdbc</artifactId>

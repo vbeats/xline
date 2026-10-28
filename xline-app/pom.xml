@@ -59,6 +59,10 @@
             <groupId>com.csf.xline</groupId>
             <artifactId>xline-http</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-serial-port</artifactId>
+        </dependency>
 
         <!-- ORM 按需引入：starter 名称按分支切换（SpringBoot 4.x 需专用 starter） -->
         <dependency>

@@ -5,6 +5,7 @@ import com.csf.xline.core.handler.DataHandler;
 import com.csf.xline.core.mssql.MssqlProperties;
 import com.csf.xline.core.mysql.MysqlProperties;
 import com.csf.xline.core.postgres.PostgresProperties;
+import com.csf.xline.core.serialport.SerialPortProperties;
 import com.csf.xline.core.sqlite.SqliteProperties;
 import com.csf.xline.core.http.HttpProperties;
 import com.csf.xline.core.tcp.TcpProperties;
@@ -53,6 +54,8 @@ public class Node implements INode {
     private TcpProperties tcp;
 
     private HttpProperties http;
+
+    private SerialPortProperties serialPort;
 
     /**
      * 业务数据处理实现，由装配阶段按节点名匹配注入。
@@ -119,6 +122,19 @@ public class Node implements INode {
         this.http = http;
         if (http != null) {
             this.type = bindType(NodeType.HTTP);
+        }
+    }
+
+    /**
+     * 配置段 setter：仅在配置段存在时推断节点类型。
+     *
+     * <p>传 null 表示该段未配置，不改变 {@link #type}：
+     * 否则属性拷贝（未配置的段也会以 null 调用 setter）会把已推断出的类型覆盖掉。
+     */
+    public void setSerialPort(SerialPortProperties serialPort) {
+        this.serialPort = serialPort;
+        if (serialPort != null) {
+            this.type = bindType(NodeType.SERIAL_PORT);
         }
     }
 

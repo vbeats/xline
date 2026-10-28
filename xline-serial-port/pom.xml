@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.csf.xline</groupId>
+        <artifactId>xline</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>xline-serial-port</artifactId>
+    <name>xline-serial-port</name>
+    <description>串口节点支持：基于 jSerialComm 收发 232 / 485 数据，接入 xline 单向数据流
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-core</artifactId>
+        </dependency>
+
+        <!--
+            jSerialComm：跨平台串口通信库，自带各平台原生库，无需额外安装驱动。
+            同时支持 Java 8 与 Java 21，故两个 JDK 分支共用同一版本。
+        -->
+        <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+        </dependency>
+    </dependencies>
+</project>

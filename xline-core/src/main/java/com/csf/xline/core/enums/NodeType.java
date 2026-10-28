@@ -24,7 +24,10 @@ public enum NodeType {
     TCP("tcp"),
 
     /** HTTP：以 Forest 发送 HTTP 请求的节点 */
-    HTTP("http");
+    HTTP("http"),
+
+    /** SERIAL_PORT：以串口（232 / 485）收发数据的节点 */
+    SERIAL_PORT("serial-port");
 
     /** 配置段名 */
     private final String segment;
