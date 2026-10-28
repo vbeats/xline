@@ -1,5 +1,6 @@
 package com.csf.xline.db.sqlserver.jdbc;
 
+import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.autoconfigure.AbstractNodeAutoConfiguration;
 import com.csf.xline.core.enums.NodeType;
@@ -16,8 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(MssqlNode.class)
 public class MssqlNodeAutoConfiguration extends AbstractNodeAutoConfiguration<MssqlNode, MssqlDataHandler> {
 
-    public MssqlNodeAutoConfiguration(XLineProperties xLineProperties) {
-        super(xLineProperties);
+    public MssqlNodeAutoConfiguration(XLineProperties xLineProperties, XLineContext xLineContext) {
+        super(xLineProperties, xLineContext);
     }
 
     @Override

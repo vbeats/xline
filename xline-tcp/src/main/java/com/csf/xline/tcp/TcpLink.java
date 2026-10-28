@@ -1,6 +1,5 @@
 package com.csf.xline.tcp;
 
-import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.tcp.TcpProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -23,7 +22,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * 单个 TCP 节点的连接：监听 / 连接、按行读取、写出数据。
  *
- * <p>读取到的每行数据以本节点为源头推向下游（{@link XLineContext#pushMsg(String, Object)}）；
+ * <p>读取到的每行数据以本节点为源头推向下游（{@link TcpNode#pushMsg(Object)}）；
  * 写出方向由业务通过 {@code TcpNode.send} 触发。
  *
  * <p>client 模式的首次连接与重连都在后台线程完成，不阻塞节点初始化。
@@ -95,12 +94,18 @@ class TcpLink {
         write(target, bytes);
     }
 
-    /** 关闭全部 socket 与线程 */
+    /**
+     * 关闭全部 socket 与线程。
+     *
+     * <p>server 模式可能挂着几十万客户端连接，逐个串行 {@code close()}
+     * 会把停机时间拉长到秒级以上，故并行关闭。
+     */
     void close() {
         running = false;
         close(serverSocket);
-        for (Socket client : clients) {
-            close(client);
+        if (!clients.isEmpty()) {
+            // 几十万级连接时并行关闭：close() 是阻塞系统调用，串行会把停机拖长
+            clients.parallelStream().forEach(client -> close(client));
         }
         clients.clear();
         close(socket);
@@ -150,7 +155,7 @@ class TcpLink {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(connected.getInputStream(), charset))) {
             String line;
             while (running && (line = reader.readLine()) != null) {
-                node.getContext().pushMsg(node.getName(), line);
+                node.pushMsg(line);
             }
         } catch (IOException e) {
             if (running) {

@@ -1,5 +1,6 @@
 package com.csf.xline.db.mysql;
 
+import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.autoconfigure.AbstractNodeAutoConfiguration;
 import com.csf.xline.core.enums.NodeType;
@@ -16,8 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(MysqlNode.class)
 public class MysqlNodeAutoConfiguration extends AbstractNodeAutoConfiguration<MysqlNode, MysqlDataHandler> {
 
-    public MysqlNodeAutoConfiguration(XLineProperties xLineProperties) {
-        super(xLineProperties);
+    public MysqlNodeAutoConfiguration(XLineProperties xLineProperties, XLineContext xLineContext) {
+        super(xLineProperties, xLineContext);
     }
 
     @Override

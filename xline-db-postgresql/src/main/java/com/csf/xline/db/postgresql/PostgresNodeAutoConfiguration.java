@@ -1,5 +1,6 @@
 package com.csf.xline.db.postgresql;
 
+import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.autoconfigure.AbstractNodeAutoConfiguration;
 import com.csf.xline.core.enums.NodeType;
@@ -16,8 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(PostgresNode.class)
 public class PostgresNodeAutoConfiguration extends AbstractNodeAutoConfiguration<PostgresNode, PostgresDataHandler> {
 
-    public PostgresNodeAutoConfiguration(XLineProperties xLineProperties) {
-        super(xLineProperties);
+    public PostgresNodeAutoConfiguration(XLineProperties xLineProperties, XLineContext xLineContext) {
+        super(xLineProperties, xLineContext);
     }
 
     @Override

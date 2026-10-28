@@ -18,7 +18,8 @@ import java.util.stream.Collectors;
  * 节点装配模板。
  *
  * <p>装配流程在各数据库模块中完全一致，故上提到本类：
- * {@code 筛选本类型的节点 → 拷贝配置到具体节点类 → 匹配业务处理器 → 初始化 → 登记到上下文}。
+ * {@code 筛选本类型的节点 → 拷贝配置到具体节点类 → 匹配业务处理器
+ * → 注入运行时上下文 → 模块专属装配 → 初始化 → 登记到上下文}。
  * 各模块只需声明节点类型、节点实现类与处理器契约三类信息。
  *
  * <p>节点在 {@link ApplicationReadyEvent} 阶段初始化：
@@ -33,8 +34,11 @@ public abstract class AbstractNodeAutoConfiguration<N extends Node, H extends Da
 
     private final XLineProperties xLineProperties;
 
-    protected AbstractNodeAutoConfiguration(XLineProperties xLineProperties) {
+    private final XLineContext xLineContext;
+
+    protected AbstractNodeAutoConfiguration(XLineProperties xLineProperties, XLineContext xLineContext) {
         this.xLineProperties = xLineProperties;
+        this.xLineContext = xLineContext;
     }
 
     /**
@@ -72,6 +76,7 @@ public abstract class AbstractNodeAutoConfiguration<N extends Node, H extends Da
 
             N target = BeanUtil.copyProperties(node, nodeClass());
             target.setDataHandler(resolveHandler(handlers, node.getName()));
+            target.setContext(xLineContext);
             beforeInit(target);
             try {
                 target.init();

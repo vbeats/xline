@@ -20,7 +20,7 @@ java -jar xline-app/target/xline-app-1.0.0.jar     # 运行，端口 10010
 
 | 层 | 关键类 | 职责 |
 | --- | --- | --- |
-| core | `Node` / `INode` | 配置绑定载体 + 生命周期模板（`init` / `destroy` / `receiveData`） |
+| core | `Node` / `INode` | 配置绑定载体 + 生命周期模板（`init` / `destroy` / `receiveData` / `pushMsg`） |
 | core | `AbstractNodeAutoConfiguration<N,H>` | 装配模板：筛选 → 拷贝 → 匹配处理器 → `beforeInit` → 初始化 → 登记 |
 | core | `XLineContext` | `NODES` / `DATA_SOURCES` 注册表、`pushMsg` |
 | core | `XLineEventHandler` | Disruptor 消费者，按 `struct` 投递下游 |
@@ -28,7 +28,7 @@ java -jar xline-app/target/xline-app-1.0.0.jar     # 运行，端口 10010
 | 节点模块 | `XxxNode` + `XxxNodeAutoConfiguration` + `XxxDataHandler` | 只声明 `nodeType()` / `nodeClass()` / `handlerClass()` |
 | app | `XlineApp` | 仅启动类，无 Controller、无 Web 配置 |
 
-数据流单向：`pushMsg(上游, data)` → 事件总线 → `struct` 下游 → `receiveData` → `DataHandler.rec`。
+节点自推：`node.pushMsg(data)`（`Node` 上已注入上下文，等价于 `pushMsg(节点名, data)`）；链路内部与业务一律用它，不要自行持有 `XLineContext`。
 节点在 `ApplicationReadyEvent` 初始化（晚于 `CommandLineRunner`）。
 
 ## 红线
@@ -55,7 +55,7 @@ java -jar xline-app/target/xline-app-1.0.0.jar     # 运行，端口 10010
 1. core：`NodeType` 加枚举项 + `com.csf.xline.core.<类型>.XxxProperties`，并在 `Node` 加字段与判空 setter；
 2. 新建模块：只引入该类型需要的依赖（数据库模块才引驱动、Druid、Flyway、anyline）；
 3. `XxxNode extends Node`：只实现 `initDataSource()` / `destroyDataSource()`；
-4. `XxxNodeAutoConfiguration extends AbstractNodeAutoConfiguration<XxxNode, XxxDataHandler>`：三个类型方法；需要运行期依赖时覆写 `beforeInit()`（参考 tcp 注入线程工厂/上下文、http 注入全局 ForestConfiguration）；
+4. `XxxNodeAutoConfiguration extends AbstractNodeAutoConfiguration<XxxNode, XxxDataHandler>`：三个类型方法 + 构造器透传 `(XLineProperties, XLineContext)`（上下文明文地由装配模板统一注入）；需要额外运行期依赖时覆写 `beforeInit()`（参考 tcp 注入线程工厂、http 注入全局 ForestConfiguration）；
 5. `XxxDataHandler extends DataHandler<XxxNode>`：`init` / `rec` / `destroy` 三个方法都要实现（无默认实现）；
 6. 根 POM 的 `<modules>`、`dependencyManagement` 同步，`xline-app` 按需引入。
 

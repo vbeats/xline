@@ -1,5 +1,6 @@
 package com.csf.xline.http;
 
+import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.autoconfigure.AbstractNodeAutoConfiguration;
 import com.csf.xline.core.enums.NodeType;
@@ -25,8 +26,9 @@ public class HttpNodeAutoConfiguration extends AbstractNodeAutoConfiguration<Htt
     private final ForestConfiguration forestConfiguration;
 
     public HttpNodeAutoConfiguration(XLineProperties xLineProperties,
+                                     XLineContext xLineContext,
                                      ObjectProvider<ForestConfiguration> forestConfiguration) {
-        super(xLineProperties);
+        super(xLineProperties, xLineContext);
         this.forestConfiguration = forestConfiguration.getIfAvailable();
     }
 

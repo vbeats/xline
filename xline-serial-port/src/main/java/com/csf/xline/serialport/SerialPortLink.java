@@ -1,7 +1,6 @@
 package com.csf.xline.serialport;
 
 import cn.hutool.core.util.HexUtil;
-import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.serialport.SerialPortProperties;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
@@ -17,7 +16,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * 单个串口节点的链路：打开串口、读空接收缓冲、写出数据。
  *
- * <p>读到的字节以本节点为源头推向下游（{@link XLineContext#pushMsg(String, Object)}）；
+ * <p>读到的字节以本节点为源头推向下游（{@link SerialPortNode#pushMsg(Object)}）；
  * 写出方向由 {@link #send(byte[])} 触发，二者都以大写十六进制记录原始数据。
  *
  * <p>串口设备不存在或被拔掉时不阻塞节点初始化：
@@ -164,12 +163,7 @@ class SerialPortLink {
             log.info("【SerialPort】{}【{}】 receive data: {}",
                     node.getName(), properties.getDevice(), HexUtil.encodeHexStr(data, false));
 
-            XLineContext context = node.getContext();
-            if (context == null) {
-                log.warn("【SerialPort】{} 未注入上下文，数据未推送", node.getName());
-                return;
-            }
-            context.pushMsg(node.getName(), data);
+            node.pushMsg(data);
         }
     }
 

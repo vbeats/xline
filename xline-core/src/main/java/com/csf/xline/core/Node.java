@@ -66,6 +66,14 @@ public class Node implements INode {
     private transient DataHandler<? extends Node> dataHandler;
 
     /**
+     * 运行时上下文：由装配阶段统一注入，节点经它把数据投递到事件总线。
+     *
+     * <p>声明为 transient：仅存在于运行期，不参与 equals / hashCode 与配置拷贝语义。
+     */
+    @ToString.Exclude
+    private transient XLineContext context;
+
+    /**
      * 配置段 setter：仅在配置段存在时推断节点类型。
      *
      * <p>传 null 表示该段未配置，不改变 {@link #type}：
@@ -172,6 +180,24 @@ public class Node implements INode {
         } catch (Exception e) {
             log.error("节点 [{}] 处理数据失败", getName(), e);
         }
+    }
+
+    /**
+     * 以本节点为出发节点向事件总线投递数据。
+     *
+     * <p>等价于 {@code context.pushMsg(getName(), payload)}：
+     * 数据由事件总线按 {@code xline.struct} 推给本节点的下游。
+     * 业务处理器拿到的就是节点自身，故直接调用本方法即可继续向下游传递，
+     * 无需再关心「出发节点名」这个路由参数。
+     *
+     * @param payload 待传递的数据
+     * @throws IllegalStateException 节点未注入上下文（未经装配即使用）
+     */
+    public void pushMsg(Object payload) {
+        if (context == null) {
+            throw new IllegalStateException(String.format("节点 [%s] 未注入上下文，无法推送数据", getName()));
+        }
+        context.pushMsg(getName(), payload);
     }
 
     /**

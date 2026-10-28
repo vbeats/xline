@@ -64,8 +64,23 @@ public class ArchiveHandler implements SqliteDataHandler {
 }
 ```
 
-推送：注入 `XLineContext` 后调用 `pushMsg("local", data)` → 事件总线解析 `struct` → `archive.receiveData(data)`。
+推送：业务处理器拿到的就是节点自身，直接 `node.pushMsg(data)` 即以本节点为出发节点投递
+（内部等价于 `xLineContext.pushMsg(node.getName(), data)`，`Node` 的上下文由装配阶段统一注入）→
+事件总线解析 `struct` → `archive.receiveData(data)`。
 容器中有多个处理器实现时按 Bean 名与节点名匹配，只有一个实现时所有节点共用。
+
+## 优雅停机
+
+`server.shutdown: graceful` 下，收到停止信号（Ctrl+C / systemd / 服务停止）时按序完成：
+
+1. 等待在途 Web 请求完成；
+2. `ContextClosedEvent` 由 `XLineShutdownListener` 统一销毁节点：先回调业务处理器的 `destroy`（数据源仍在，可做收尾写入），再释放节点资源 —— 关闭数据库连接池（Druid）并注销 anyline 数据源、关闭 TCP 连接与线程、释放串口占用并停掉重开线程；
+3. Spring 销毁剩余 Bean（含事件总线 Disruptor 的关闭），之后 JVM 退出（Ctrl+C 停机退出码 130）。
+
+大规模资源下销毁按「分组并行」执行：共享同一业务处理器的节点串行销毁（处理器实现可能非线程安全），其余节点并行，并行度取节点组数与 CPU 数的较小值；TCP server 节点的几十万客户端连接也是并行关闭。总时限 30 秒：单个节点销毁卡死不会无限期拖住停机，超时后中断并告警，剩余资源由操作系统回收。
+
+节点不是 Spring Bean，Spring 的销毁回调够不到它们 —— 没有该监听器时，
+节点资源（连接池、socket、串口）只能靠进程死亡由操作系统回收，对端会看到连接骤断而非优雅关闭。
 
 ## 数据库节点
 

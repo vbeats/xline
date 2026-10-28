@@ -1,5 +1,6 @@
 package com.csf.xline.db.sqlite;
 
+import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.autoconfigure.AbstractNodeAutoConfiguration;
 import com.csf.xline.core.enums.NodeType;
@@ -16,8 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(SqliteNode.class)
 public class SqliteNodeAutoConfiguration extends AbstractNodeAutoConfiguration<SqliteNode, SqliteDataHandler> {
 
-    public SqliteNodeAutoConfiguration(XLineProperties xLineProperties) {
-        super(xLineProperties);
+    public SqliteNodeAutoConfiguration(XLineProperties xLineProperties, XLineContext xLineContext) {
+        super(xLineProperties, xLineContext);
     }
 
     @Override

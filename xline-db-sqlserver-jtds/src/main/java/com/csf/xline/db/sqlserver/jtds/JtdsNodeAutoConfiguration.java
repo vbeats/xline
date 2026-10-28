@@ -1,5 +1,6 @@
 package com.csf.xline.db.sqlserver.jtds;
 
+import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.autoconfigure.AbstractNodeAutoConfiguration;
 import com.csf.xline.core.enums.NodeType;
@@ -16,8 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(JtdsNode.class)
 public class JtdsNodeAutoConfiguration extends AbstractNodeAutoConfiguration<JtdsNode, JtdsDataHandler> {
 
-    public JtdsNodeAutoConfiguration(XLineProperties xLineProperties) {
-        super(xLineProperties);
+    public JtdsNodeAutoConfiguration(XLineProperties xLineProperties, XLineContext xLineContext) {
+        super(xLineProperties, xLineContext);
     }
 
     @Override

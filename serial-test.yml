@@ -1,0 +1,15 @@
+# 串口测试配置：COM2 ↔ COM3 双向互传
+# 启动：java -jar xline-app/target/xline-app-1.0.0.jar --spring.config.additional-location=file:serial-test.yml
+xline:
+  nodes:
+    - name: c2
+      serial-port:
+        device: COM2
+    - name: c3
+      serial-port:
+        device: COM3
+  struct:
+    c2:
+      - c3
+    c3:
+      - c2

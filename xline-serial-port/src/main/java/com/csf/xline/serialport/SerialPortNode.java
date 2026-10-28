@@ -1,7 +1,6 @@
 package com.csf.xline.serialport;
 
 import com.csf.xline.core.Node;
-import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.concurrent.ThreadFactoryProvider;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -14,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>串口的打开与关闭委托给 {@link SerialPortEndpoint}；
  * 生命周期与数据处理由 {@link Node} 的模板统一完成：
  * <ul>
- *     <li>读到串口数据 —— 以本节点为源头 {@code pushMsg} 推向下游；</li>
+ *     <li>读到串口数据 —— 以本节点为源头 {@link #pushMsg(Object)} 推向下游；</li>
  *     <li>收到上游数据 —— 有业务处理器时交给它处理，否则直接 {@link #send(Object)} 写往串口，
  *         使 struct 中成对的串口无需业务代码即可双向转发。</li>
  * </ul>
@@ -23,14 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class SerialPortNode extends Node {
-
-    /**
-     * 运行时上下文：读到串口数据后经它推向下游，由装配阶段注入。
-     *
-     * <p>声明为 transient：仅存在于运行期。
-     */
-    @ToString.Exclude
-    private transient XLineContext context;
 
     /**
      * 线程工厂供给：JDK 21 为虚拟线程、JDK 1.8 为平台线程，由装配阶段注入。

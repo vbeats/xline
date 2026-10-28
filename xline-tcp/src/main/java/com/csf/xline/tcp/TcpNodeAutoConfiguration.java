@@ -20,14 +20,11 @@ public class TcpNodeAutoConfiguration extends AbstractNodeAutoConfiguration<TcpN
 
     private final ThreadFactoryProvider threadFactoryProvider;
 
-    private final XLineContext xLineContext;
-
     public TcpNodeAutoConfiguration(XLineProperties xLineProperties,
-                                    ThreadFactoryProvider threadFactoryProvider,
-                                    XLineContext xLineContext) {
-        super(xLineProperties);
+                                    XLineContext xLineContext,
+                                    ThreadFactoryProvider threadFactoryProvider) {
+        super(xLineProperties, xLineContext);
         this.threadFactoryProvider = threadFactoryProvider;
-        this.xLineContext = xLineContext;
     }
 
     @Override
@@ -53,6 +50,5 @@ public class TcpNodeAutoConfiguration extends AbstractNodeAutoConfiguration<TcpN
     @Override
     protected void beforeInit(TcpNode node) {
         node.setThreadFactory(threadFactoryProvider);
-        node.setContext(xLineContext);
     }
 }

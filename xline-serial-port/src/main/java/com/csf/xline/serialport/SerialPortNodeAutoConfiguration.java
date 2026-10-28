@@ -20,14 +20,11 @@ public class SerialPortNodeAutoConfiguration extends AbstractNodeAutoConfigurati
 
     private final ThreadFactoryProvider threadFactoryProvider;
 
-    private final XLineContext xLineContext;
-
     public SerialPortNodeAutoConfiguration(XLineProperties xLineProperties,
-                                           ThreadFactoryProvider threadFactoryProvider,
-                                           XLineContext xLineContext) {
-        super(xLineProperties);
+                                           XLineContext xLineContext,
+                                           ThreadFactoryProvider threadFactoryProvider) {
+        super(xLineProperties, xLineContext);
         this.threadFactoryProvider = threadFactoryProvider;
-        this.xLineContext = xLineContext;
     }
 
     @Override
@@ -46,14 +43,14 @@ public class SerialPortNodeAutoConfiguration extends AbstractNodeAutoConfigurati
     }
 
     /**
-     * 初始化前注入上下文与线程工厂：
-     * 上下文用于把读到的数据推向下游，线程工厂用于创建串口重开线程。
+     * 初始化前注入线程工厂：串口重开线程按其创建。
+     *
+     * <p>上下文已由装配模板统一注入，故此处只补充节点专属依赖。
      *
      * @param node 待初始化的节点
      */
     @Override
     protected void beforeInit(SerialPortNode node) {
-        node.setContext(xLineContext);
         node.setThreadFactory(threadFactoryProvider);
     }
 }

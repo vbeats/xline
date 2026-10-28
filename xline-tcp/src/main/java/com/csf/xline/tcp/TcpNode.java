@@ -1,7 +1,6 @@
 package com.csf.xline.tcp;
 
 import com.csf.xline.core.Node;
-import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.concurrent.ThreadFactoryProvider;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,14 +27,6 @@ public class TcpNode extends Node {
      */
     @ToString.Exclude
     private transient ThreadFactoryProvider threadFactory;
-
-    /**
-     * 运行时上下文：读到对端数据后经它推向下游，由装配阶段注入。
-     *
-     * <p>声明为 transient：仅存在于运行期。
-     */
-    @ToString.Exclude
-    private transient XLineContext context;
 
     @Override
     protected void initDataSource() throws Exception {
