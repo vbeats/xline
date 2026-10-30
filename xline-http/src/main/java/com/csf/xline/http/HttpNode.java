@@ -5,6 +5,7 @@ import com.dtflys.forest.config.ForestConfiguration;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.springframework.util.Assert;
 
 /**
  * HTTP 节点。
@@ -71,10 +72,15 @@ public class HttpNode extends Node {
     /**
      * 拼接完整地址：{@code base-url + path}。
      *
+     * <p>{@code http} 配置段可选（未书写时地址由业务接口自带），
+     * 但拼接地址必须有 {@code base-url}，故此处显式报错而非 NPE。
+     *
      * @param path 路径，如 {@code /api/data} 或 {@code api/data}
      * @return 完整地址
+     * @throws IllegalArgumentException 未配置 http 配置段或 base-url
      */
     public String url(String path) {
+        Assert.notNull(getHttp(), String.format("【%s】 未配置 http 配置段，无法拼接地址", getName()));
         String base = getHttp().resolvedBaseUrl();
         if (path == null || path.isEmpty()) {
             return base;

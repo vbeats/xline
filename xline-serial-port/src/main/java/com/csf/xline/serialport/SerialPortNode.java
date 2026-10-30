@@ -48,7 +48,7 @@ public class SerialPortNode extends Node {
      */
     @Override
     public void receiveData(Object data) {
-        if (getDataHandler() == null) {
+        if (dataHandler() == null) {
             try {
                 send(data);
             } catch (Exception e) {

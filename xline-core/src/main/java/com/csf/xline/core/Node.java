@@ -9,7 +9,10 @@ import com.csf.xline.core.serialport.SerialPortProperties;
 import com.csf.xline.core.sqlite.SqliteProperties;
 import com.csf.xline.core.http.HttpProperties;
 import com.csf.xline.core.tcp.TcpProperties;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +34,9 @@ import java.util.Map;
  * 各数据库节点只需实现这两个钩子，无需再编写重复的生命周期代码。
  *
  * <p>本类同时是 yml 配置的绑定载体，因此必须可实例化。
+ * 可配置项只有 {@code name}、{@code type}、{@code extra} 与七个类型配置段；
+ * 运行期状态（{@link #dataHandler} / {@link #context}）不生成 {@code getXxx} / {@code setXxx}，
+ * 因而不会被配置绑定器识别为配置项，只能由装配阶段经 {@link #attach(DataHandler, XLineContext)} 注入。
  */
 @Data
 @Slf4j
@@ -61,16 +67,24 @@ public class Node implements INode {
      * 业务数据处理实现，由装配阶段按节点名匹配注入。
      *
      * <p>声明为 transient：仅存在于运行期，不参与 equals / hashCode 与配置拷贝语义。
+     * 不生成 {@code getDataHandler} / {@code setDataHandler}：它不是配置项，
+     * 读写一律走 {@link #dataHandler()} 与 {@link #attach(DataHandler, XLineContext)}。
      */
     @ToString.Exclude
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
     private transient DataHandler<? extends Node> dataHandler;
 
     /**
      * 运行时上下文：由装配阶段统一注入，节点经它把数据投递到事件总线。
      *
      * <p>声明为 transient：仅存在于运行期，不参与 equals / hashCode 与配置拷贝语义。
+     * 不生成 {@code getContext} / {@code setContext}：它不是配置项，
+     * 读取走 {@link #context()}，注入走 {@link #attach(DataHandler, XLineContext)}。
      */
     @ToString.Exclude
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
     private transient XLineContext context;
 
     /**
@@ -146,6 +160,41 @@ public class Node implements INode {
         }
     }
 
+    /**
+     * 注入运行期依赖：业务处理器与运行时上下文。
+     *
+     * <p>由装配阶段在初始化前一次性调用。二者都不是配置项，故不提供 setter
+     * —— 配置绑定器只识别 {@code setXxx}，不识别本方法。
+     *
+     * @param dataHandler 本节点的业务处理器，无实现时传 {@code null}
+     * @param context     运行时上下文
+     */
+    public void attach(DataHandler<? extends Node> dataHandler, XLineContext context) {
+        this.dataHandler = dataHandler;
+        this.context = context;
+    }
+
+    /**
+     * 取本节点的业务处理器。
+     *
+     * @return 业务处理器，未注册时为 {@code null}
+     */
+    public DataHandler<? extends Node> dataHandler() {
+        return dataHandler;
+    }
+
+    /**
+     * 取运行时上下文。
+     *
+     * <p>仅用于框架内部与需要访问注册表（{@link XLineContext#NODES} / {@link XLineContext#DATA_SOURCES}）的场合；
+     * 推送数据请用 {@link #pushMsg(Object)}，不必自行持有上下文。
+     *
+     * @return 运行时上下文，未经装配时为 {@code null}
+     */
+    public XLineContext context() {
+        return context;
+    }
+
     @Override
     public void init() throws Exception {
         initDataSource();
@@ -186,13 +235,12 @@ public class Node implements INode {
      * 以本节点为出发节点向事件总线投递数据。
      *
      * <p>等价于 {@code context.pushMsg(getName(), payload)}：
-     * 数据由事件总线按 {@code xline.struct} 推给本节点的下游。
-     * 业务处理器拿到的就是节点自身，故直接调用本方法即可继续向下游传递，
-     * 无需再关心「出发节点名」这个路由参数。
+     * 出发节点名由本节点自己提供，业务无需（也无法）传入。
      *
      * @param payload 待传递的数据
      * @throws IllegalStateException 节点未注入上下文（未经装配即使用）
      */
+    @Override
     public void pushMsg(Object payload) {
         if (context == null) {
             throw new IllegalStateException(String.format("节点 [%s] 未注入上下文，无法推送数据", getName()));

@@ -43,6 +43,9 @@ xline:
         encrypt: false
         trust-server-certificate: true
         flyway: false
+    # HTTP 节点：只写 type 不写 http 段，全部沿用 forest.* 全局配置
+    - name: api
+      type: http
     # 串口节点：不注册业务处理器时，节点自动把读到的字节转发给下游、把上游数据写入串口
     # - name: c1
     #   serial-port:

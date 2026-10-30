@@ -3,7 +3,6 @@ package com.csf.xline.http;
 import com.csf.xline.core.http.HttpProperties;
 import com.dtflys.forest.config.ForestConfiguration;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.util.Map;
@@ -25,12 +24,14 @@ public class HttpClients {
     /**
      * 按节点配置创建 Forest 配置。
      *
+     * <p>{@code http} 配置段可选：未书写时全部沿用 Forest 全局配置
+     * （接口自带 {@code @Address} 即可，无需节点级 {@code base-url}）。
+     *
      * @param node HTTP 节点
      * @return 该节点独立的 Forest 配置
      */
     public static ForestConfiguration create(HttpNode node) {
-        HttpProperties properties = node.getHttp();
-        Assert.notNull(properties, String.format("【%s】 未配置 http 配置段", node.getName()));
+        HttpProperties properties = node.getHttp() == null ? new HttpProperties() : node.getHttp();
 
         ForestConfiguration global = node.getGlobalConfiguration();
         ForestConfiguration configuration = ForestConfiguration.configuration();
@@ -72,7 +73,7 @@ public class HttpClients {
 
         CONFIGS.put(node.getName(), configuration);
         log.info("【Http - Forest】created: {} -> {}（{}）",
-                node.getName(), properties.resolvedBaseUrl(),
+                node.getName(), describeBaseUrl(properties),
                 global == null ? "仅节点配置" : "节点配置优先，未配项沿用全局");
         return configuration;
     }
@@ -91,5 +92,12 @@ public class HttpClients {
     /** 节点值优先，其次全局值 */
     private static <T> T first(T nodeValue, T globalValue) {
         return nodeValue != null ? nodeValue : globalValue;
+    }
+
+    /** 日志用的地址描述：未配置 base-url 时地址由接口自带的 {@code @Address} 决定 */
+    private static String describeBaseUrl(HttpProperties properties) {
+        return StringUtils.hasText(properties.getBaseUrl())
+                ? properties.resolvedBaseUrl()
+                : "未配置 base-url（地址由接口 @Address 决定）";
     }
 }

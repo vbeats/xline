@@ -28,8 +28,11 @@
 ```bash
 mvn clean install -DskipTests                    # 按当前 JDK 自动选分支
 mvn -P '!jdk21,jdk8' clean install -DskipTests   # 强制 jdk8 分支（两个 profile 互斥）
-java -jar xline-app/target/xline-app-1.0.0.jar   # 启动，默认端口 10010
+java -jar target/xline.jar     # 启动，默认端口 10010
 ```
+
+运行包固定输出到**工程根目录**的 `target/xline.jar`（`xline-app` 的构建目录被覆写，模块自身不再生成 `target`），
+文件名不带版本号；其余模块仍各自输出到模块目录下的 `target`。
 
 启动日志示例：
 
@@ -65,8 +68,9 @@ public class ArchiveHandler implements SqliteDataHandler {
 ```
 
 推送：业务处理器拿到的就是节点自身，直接 `node.pushMsg(data)` 即以本节点为出发节点投递
-（内部等价于 `xLineContext.pushMsg(node.getName(), data)`，`Node` 的上下文由装配阶段统一注入）→
+（`pushMsg` 是 `INode` 契约方法，出发节点名由节点自己提供，**不需要传节点名**）→
 事件总线解析 `struct` → `archive.receiveData(data)`。
+`XLineContext.pushMsg(节点名, data)` 是按名注入事件总线的底层路由 API，业务代码不要直接用。
 容器中有多个处理器实现时按 Bean 名与节点名匹配，只有一个实现时所有节点共用。
 
 ## 优雅停机
@@ -126,7 +130,18 @@ SQL Server 额外支持 `instance`（实例名）、`domain`（域认证）、`e
 
 ## HTTP 节点
 
-请求由 Forest 实现；`base-url` 必填，节点未配置的项沿用 `forest.*` 全局配置。
+请求由 Forest 实现；**`http` 配置段整体可选**，未配置的项沿用 `forest.*` 全局配置。
+
+只写 `type: http`、不写 `http` 段即可 —— 此时地址由业务接口自带的 `@Address` / `@Request(url)` 决定：
+
+```yaml
+xline:
+  nodes:
+    - name: api
+      type: http              # 不需要任何 http 属性
+```
+
+需要节点级地址或覆盖全局超时时才写 `http` 段（写了则以节点值优先）：
 
 ```yaml
 forest:
@@ -136,6 +151,7 @@ forest:
 xline:
   nodes:
     - name: api
+      type: http
       http:
         base-url: http://192.168.1.10:8080
         read-timeout: 8888     # 覆盖全局的 read-timeout
@@ -149,7 +165,7 @@ public interface UserApi {
 
 // 处理器内
 String result = node.client(UserApi.class).list();   // 绑定本节点配置
-String url = node.url("/user/list");                 // 仅拼接 base-url + path
+String url = node.url("/user/list");                 // 拼接 base-url + path，未配置 http 段时报错提示
 ```
 
 响应非 2xx 时 Forest 抛 `ForestNetworkException`，可在接口上用 `@SuccessWhen` 自定义成功条件。
@@ -204,6 +220,7 @@ public class C1Handler implements SerialPortDataHandler {
 | 配置 | 说明 |
 | --- | --- |
 | `xline.nodes[].name` | 节点名，用于 `struct`、处理器匹配与数据源注册 |
+| `xline.nodes[].type` | 节点类型（可选）：书写类型配置段时自动推断，也可显式声明；`http` 允许只写类型、不写配置段 |
 | `xline.nodes[].<类型段>` | 可选 `mysql` / `postgresql` / `sqlite` / `mssql` / `tcp` / `http` / `serial-port`，重复配置不同类型会报错 |
 | `xline.struct` | 单向拓扑：key 上游，value 下游列表 |
 | `forest.*` | Forest 全局配置（引入 `xline-http` 时生效） |

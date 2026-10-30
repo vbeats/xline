@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class Db1DataHandler implements JtdsDataHandler, TimerTask {
 
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final ThreadFactory threadFactory = new DefaultThreadFactory("data-thread", true, Thread.NORM_PRIORITY);
     private final HashedWheelTimer timer = new HashedWheelTimer(threadFactory, 100L, TimeUnit.MILLISECONDS, 512, true, 10L);
 

@@ -75,8 +75,7 @@ public abstract class AbstractNodeAutoConfiguration<N extends Node, H extends Da
             }
 
             N target = BeanUtil.copyProperties(node, nodeClass());
-            target.setDataHandler(resolveHandler(handlers, node.getName()));
-            target.setContext(xLineContext);
+            target.attach(resolveHandler(handlers, node.getName()), xLineContext);
             beforeInit(target);
             try {
                 target.init();

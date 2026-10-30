@@ -67,7 +67,7 @@ public class XLineShutdownListener implements ApplicationListener<ContextClosedE
                 continue;
             }
             Node node = (Node) value;
-            Object key = node.getDataHandler() != null ? node.getDataHandler() : node;
+            Object key = node.dataHandler() != null ? node.dataHandler() : node;
             List<Node> group = groups.get(key);
             if (group == null) {
                 group = new ArrayList<>();

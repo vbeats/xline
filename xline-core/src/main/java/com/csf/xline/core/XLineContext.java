@@ -55,11 +55,13 @@ public class XLineContext {
     }
 
     /**
-     * 向事件总线投递数据。
+     * 按出发节点名向事件总线注入数据（底层路由 API）。
      *
-     * <p>数据将由事件总线推送给该节点的全部下游节点。
+     * <p>{@code nodeName} 是 {@code xline.struct} 的路由键，
+     * 事件总线靠它解析下游，因此本方法无法去掉该参数。
+     * 业务代码请改用 {@link Node#pushMsg(Object)}：节点自带名字，无需传参。
      *
-     * @param nodeName 当前节点名
+     * @param nodeName 出发节点名
      * @param payload  待传递的数据
      */
     public void pushMsg(String nodeName, Object payload) {

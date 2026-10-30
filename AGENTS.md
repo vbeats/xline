@@ -9,26 +9,29 @@ xline：Maven 多模块、节点式单向数据流框架，一套 Java 8 语法�
 mvn clean install -DskipTests                  # 默认按当前 JDK 选分支
 mvn -P '!jdk21,jdk8' clean install -DskipTests # 强制 jdk8 分支（两 profile 互斥，不能只写 -Pjdk8）
 mvn -pl xline-http -am clean install -DskipTests   # 单模块改动
-java -jar xline-app/target/xline-app-1.0.0.jar     # 运行，端口 10010
+java -jar target/xline.jar                        # 运行，端口 10010
 ```
 
 - 仓库**没有任何测试**（无 `src/test`）。改动后必须：双分支构建 + 启动一次看日志（`reg success` / `Started XlineApp` / 无 ERROR）。
 - 版本 `1.0.0` 来自根 POM 的 `<revision>`，改版本只改这一处。
 - 不使用 Maven Wrapper，不生成 `mvnw`。
+- **`xline-app` 的构建目录被覆写为根目录 `target`，产物名固定 `xline.jar`**（`xline-app/pom.xml` 的 `<directory>` / `<finalName>`）。
+  其余模块仍在各自模块下的 `target`；`xline-app/target` 不再生成。两个分支共用同一路径，切分支即覆盖。
 
 ## 架构速查
 
 | 层 | 关键类 | 职责 |
 | --- | --- | --- |
-| core | `Node` / `INode` | 配置绑定载体 + 生命周期模板（`init` / `destroy` / `receiveData` / `pushMsg`） |
+| core | `Node` / `INode` | 配置绑定载体 + 生命周期模板（`init` / `destroy` / `receiveData` / `pushMsg`）；可配置项只有 `name` / `type` / `extra` 与类型段 |
 | core | `AbstractNodeAutoConfiguration<N,H>` | 装配模板：筛选 → 拷贝 → 匹配处理器 → `beforeInit` → 初始化 → 登记 |
-| core | `XLineContext` | `NODES` / `DATA_SOURCES` 注册表、`pushMsg` |
+| core | `XLineContext` | `NODES` / `DATA_SOURCES` 注册表、`pushMsg(节点名, data)`（底层路由 API，业务不用） |
 | core | `XLineEventHandler` | Disruptor 消费者，按 `struct` 投递下游 |
 | core | `XLineRoutingDataSource` | 实现 `javax.sql.DataSource`，按 `NodeContext` 路由 |
 | 节点模块 | `XxxNode` + `XxxNodeAutoConfiguration` + `XxxDataHandler` | 只声明 `nodeType()` / `nodeClass()` / `handlerClass()` |
 | app | `XlineApp` | 仅启动类，无 Controller、无 Web 配置 |
 
-节点自推：`node.pushMsg(data)`（`Node` 上已注入上下文，等价于 `pushMsg(节点名, data)`）；链路内部与业务一律用它，不要自行持有 `XLineContext`。
+节点自推：`node.pushMsg(data)`（`INode` 契约方法，节点已自带名字与上下文，无节点名参数）；链路内部与业务一律用它，不要自行持有 `XLineContext`。
+`XLineContext.pushMsg(节点名, data)` 是按名注入事件总线的底层路由 API，节点名即 `struct` 的路由键，不能去掉。
 节点在 `ApplicationReadyEvent` 初始化（晚于 `CommandLineRunner`）。
 
 ## 红线
@@ -49,10 +52,19 @@ java -jar xline-app/target/xline-app-1.0.0.jar     # 运行，端口 10010
 7. **`application.yml` 必须保留** `spring.flyway.enabled: false`，否则 jdk8 分支启动即失败（Flyway 抢在节点就绪前取路由数据源连接）。
 8. **分支差异靠属性，不靠代码分支**：`${web.starter.artifactId}`、`${mybatis-plus.starter.artifactId}`、`${forest.starter.artifactId}` 由 profile 切换。
 9. 构造器注入；不直接用 `ObjectMapper`（Jackson 2 仅为 anyline 运行期）；不引入 JPA / Bean Validation 等命名空间迁移件。
+10. **`Node` 的运行期字段不得生成 `getXxx` / `setXxx`**：`dataHandler` / `context` 一律标注 `@Getter(AccessLevel.NONE)` + `@Setter(AccessLevel.NONE)`，读取走 `dataHandler()` / `context()`，注入走 `attach(handler, context)`。
+    ```java
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private transient XLineContext context;   // 写成 @Data 默认访问器 → 被绑定器当成可配置项
+    ```
+    配置绑定器只识别 `setXxx`，生成 setter 就等于把运行期状态暴露成配置项。
+11. **类型配置段可选，节点实现必须容忍它为 null**：允许只写 `type: http` 不写 `http` 段（参考 `HttpClients.create` 兜底 `new HttpProperties()`）；
+    只有真正用到必填字段时才报错（`HttpNode.url` 用 `Assert.notNull` 给出明确提示，不要抛 NPE）。
 
 ## 新增一种节点类型
 
-1. core：`NodeType` 加枚举项 + `com.csf.xline.core.<类型>.XxxProperties`，并在 `Node` 加字段与判空 setter；
+1. core：`NodeType` 加枚举项 + `com.csf.xline.core.<类型>.XxxProperties`，并在 `Node` 加字段与判空 setter（字段须用 `@Data` 默认访问器，运行期字段才用 `AccessLevel.NONE`）；
 2. 新建模块：只引入该类型需要的依赖（数据库模块才引驱动、Druid、Flyway、anyline）；
 3. `XxxNode extends Node`：只实现 `initDataSource()` / `destroyDataSource()`；
 4. `XxxNodeAutoConfiguration extends AbstractNodeAutoConfiguration<XxxNode, XxxDataHandler>`：三个类型方法 + 构造器透传 `(XLineProperties, XLineContext)`（上下文明文地由装配模板统一注入）；需要额外运行期依赖时覆写 `beforeInit()`（参考 tcp 注入线程工厂、http 注入全局 ForestConfiguration）；

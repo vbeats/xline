@@ -72,6 +72,16 @@
     </dependencies>
 
     <build>
+        <!--
+            构建输出统一放到工程根目录的 target，而不是本模块自己的 target：
+            可运行的产物只有这一个，放根目录便于部署脚本按固定路径取用。
+            产物名固定为 xline.jar —— 不带版本号，脚本无需随版本改动。
+            注意：根 POM 本身（packaging=pom）的构建目录也是根目录 target，
+            但它不编译、不打包，只产出 .flattened-pom.xml，与本模块不冲突。
+        -->
+        <directory>${project.basedir}/../target</directory>
+        <finalName>xline</finalName>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
