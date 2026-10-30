@@ -1,17 +1,20 @@
 package com.csf.xline.tcp;
 
 import com.csf.xline.core.tcp.TcpProperties;
+import com.csf.xline.tcp.codec.LineFrameDecoder;
+import com.csf.xline.tcp.codec.TcpFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PushbackInputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,6 +38,9 @@ class TcpLink {
     private final Charset charset;
     private final ExecutorService executor;
 
+    /** 帧解码器：由装配阶段注入，缺省按行分帧 */
+    private final TcpFrameDecoder decoder;
+
     /** server 模式下已接入的客户端 */
     private final Set<Socket> clients = ConcurrentHashMap.newKeySet();
 
@@ -50,6 +56,7 @@ class TcpLink {
         this.properties = node.getTcp();
         this.charset = Charset.forName(properties.getCharset());
         this.executor = Executors.newCachedThreadPool(threadFactory(node));
+        this.decoder = node.getDecoder() == null ? new LineFrameDecoder() : node.getDecoder();
     }
 
     /**
@@ -74,12 +81,12 @@ class TcpLink {
     /**
      * 写出数据：server 模式广播给全部在线客户端，client 模式写往对端。
      *
-     * @param text 待发送文本（换行由配置决定）
+     * @param data 待发送数据：{@code byte[]} 原样写出（自定义帧解码场景），
+     *             其余按 {@code charset} 转文本，换行由 {@code append-new-line} 决定
      * @throws IOException 写出失败
      */
-    void send(String text) throws IOException {
-        String payload = Boolean.TRUE.equals(properties.getAppendNewLine()) ? text + "\n" : text;
-        byte[] bytes = payload.getBytes(charset);
+    void send(Object data) throws IOException {
+        byte[] bytes = toBytes(data);
         if (serverSocket != null) {
             for (Socket client : clients) {
                 write(client, bytes);
@@ -92,6 +99,24 @@ class TcpLink {
             return;
         }
         write(target, bytes);
+    }
+
+    /**
+     * 把待发送数据转为字节：{@code byte[]} 原样写出，其余按 {@code charset} 编码。
+     *
+     * @param data 待发送数据
+     * @return 待写出字节
+     */
+    private byte[] toBytes(Object data) {
+        if (data == null) {
+            return new byte[0];
+        }
+        if (data instanceof byte[]) {
+            return (byte[]) data;
+        }
+        String text = String.valueOf(data);
+        return Boolean.TRUE.equals(properties.getAppendNewLine())
+                ? (text + "\n").getBytes(charset) : text.getBytes(charset);
     }
 
     /**
@@ -117,6 +142,7 @@ class TcpLink {
         while (running && serverSocket != null && !serverSocket.isClosed()) {
             try {
                 Socket accepted = serverSocket.accept();
+                applyOptions(accepted);
                 clients.add(accepted);
                 log.info("【Tcp】客户端接入：{} <- {}", node.getName(), accepted.getRemoteSocketAddress());
                 executor.execute(() -> readLoop(accepted));
@@ -134,6 +160,7 @@ class TcpLink {
         while (running) {
             try {
                 Socket connected = new Socket(properties.getHost(), properties.resolvedPort());
+                applyOptions(connected);
                 socket = connected;
                 log.info("【Tcp】已连接对端：{} -> {}:{}",
                         node.getName(), properties.getHost(), properties.resolvedPort());
@@ -150,12 +177,24 @@ class TcpLink {
         }
     }
 
-    /** 按行读取对端数据，每行以本节点为源头推向下游 */
+    /** 按解码器分帧读取对端数据，每帧以本节点为源头推向下游 */
     private void readLoop(Socket connected) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connected.getInputStream(), charset))) {
-            String line;
-            while (running && (line = reader.readLine()) != null) {
-                node.pushMsg(line);
+        int bufferSize = properties.getBufferSize() == null || properties.getBufferSize() <= 0
+                ? 1024 : properties.getBufferSize();
+        try (PushbackInputStream in = new PushbackInputStream(
+                new BufferedInputStream(connected.getInputStream(), bufferSize), TcpFrameDecoder.PUSHBACK_SIZE)) {
+            while (running) {
+                byte[] frame;
+                try {
+                    frame = decoder.decode(in);
+                } catch (SocketTimeoutException e) {
+                    // 解码器把超时抛回来了：连接仍可用，续等下一帧
+                    continue;
+                }
+                if (frame == null) {
+                    break;
+                }
+                node.pushMsg(frame);
             }
         } catch (IOException e) {
             if (running) {
@@ -181,6 +220,23 @@ class TcpLink {
             log.warn("【Tcp】写出失败，关闭连接：{}", node.getName(), e);
             clients.remove(target);
             close(target);
+        }
+    }
+
+    /**
+     * 应用 socket 选项：读取超时供帧解码器做「空闲即出帧」。
+     *
+     * <p>0 / 未配置时不设置，保持一直等待 —— 默认行为不受影响。
+     */
+    private void applyOptions(Socket target) {
+        Integer timeout = properties.getReadTimeoutMillis();
+        if (timeout == null || timeout <= 0) {
+            return;
+        }
+        try {
+            target.setSoTimeout(timeout);
+        } catch (IOException e) {
+            log.warn("【Tcp】设置读取超时失败：{}", node.getName(), e);
         }
     }
 

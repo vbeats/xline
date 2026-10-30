@@ -1,0 +1,37 @@
+# TCP 双向转发测试配置：node1（server 9847）↔ node2（client 127.0.0.1:8888）
+# 启动：java -jar target/xline.jar --spring.config.additional-location=file:./demo/tcp-test.yml
+#
+# 数据方向（struct 两个方向各配一条边，即成对节点双向转发）：
+#   9847 的客户端    ──▶ node1 ──▶ node2 ──▶ 127.0.0.1:8888 的服务端
+#   127.0.0.1:8888 ──▶ node2 ──▶ node1 ──▶ 9847 上的全部客户端
+#
+# 转发动作由 xline-app 的 TcpForwardDataHandler 完成：
+# 收到上游数据即在 rec 中 node.send(data) 原样写往本节点的对端。
+#
+# 分帧由 xline-app 的 HeaderFrameDecoder 完成（0x0A0B0C0D 起始，整帧最长 100 字节），
+# 故不再按换行分帧：append-new-line: false。
+xline:
+  nodes:
+    - name: node1
+      tcp:
+        mode: server
+        port: 9847
+        # host 为绑定地址：留空绑定本机全部地址；只允许本机接入时填 127.0.0.1
+        charset: UTF-8
+        append-new-line: false    # 按帧收发，不再追加换行
+        read-timeout-millis: 200  # 空闲 200ms 即出帧：不足 100 字节的帧也能即时转发
+    - name: node2
+      tcp:
+        mode: client
+        host: 127.0.0.1
+        port: 8888
+        charset: UTF-8
+        append-new-line: false
+        read-timeout-millis: 200
+        reconnect: true           # 8888 尚未监听时后台重连，不阻断启动
+        reconnect-interval-millis: 3000
+  struct:
+    node1:
+      - node2
+    node2:
+      - node1

@@ -42,6 +42,21 @@ Tomcat started on port 10010
 Started XlineApp in 2.3 seconds
 ```
 
+## 测试配置（demo）
+
+`xline-app` 自带的 `application.yml` 只有框架级配置，不含任何节点；
+节点与 `struct` 的测试配置统一放在工程根目录的 `demo/` 下，启动时叠加（附加位置优先级更高，会整段覆盖 `xline.nodes`）：
+
+```bash
+java -jar target/xline.jar --spring.config.additional-location=file:./demo/tcp-test.yml
+```
+
+| 文件 | 内容 |
+| --- | --- |
+| `demo/tcp-test.yml` | `node1`（server 9847）与 `node2`（client 127.0.0.1:8888）按 `0x0A0B0C0D` 帧头双向转发 |
+| `demo/serial-test.yml` | `c2`（COM2）与 `c3`（COM3）双向互传 |
+| `demo/db-test.yml` | `db1`（SQL Server）与 `api`（HTTP 节点） |
+
 ## 快速开始
 
 ```yaml
@@ -121,12 +136,35 @@ SQL Server 额外支持 `instance`（实例名）、`domain`（域认证）、`e
     port: 10011           # 必填：server 监听端口，client 对端端口
     host: 127.0.0.1       # client 必填；server 为绑定地址，留空绑定全部
     charset: UTF-8
-    append-new-line: true # 发送时追加换行
+    append-new-line: true # 发送时追加换行（仅按行收发需要）
+    read-timeout-millis: 0 # 读取超时：0 不启用；自定义帧解码器用它做「空闲即出帧」
     reconnect: true       # client 断线重连
 ```
 
-- **对端 → 下游**：读到一行数据即以本节点为源头推给下游；
-- **上游 → 对端**：在 `TcpDataHandler.rec` 中调用 `node.send(data)`（server 模式广播给全部在线连接）。
+- **对端 → 下游**：按帧解码器解出一帧（`byte[]`），以本节点为源头推给下游；
+- **上游 → 对端**：在 `TcpDataHandler.rec` 中调用 `node.send(data)`（server 模式广播给全部在线连接）；
+  `byte[]` 原样写出，其余按 `charset` 转文本 —— 转发二进制帧时无需任何转换。
+
+### 帧解码器
+
+默认按行分帧（读到 `\n` 为一帧）。二进制协议实现 `TcpFrameDecoder` 并注册为 Bean 即可替换，
+按 Bean 名与节点名匹配，只有一个实现时全部节点共用：
+
+```java
+@Component
+public class HeaderFrameDecoder implements TcpFrameDecoder {
+    @Override
+    public byte[] decode(PushbackInputStream in) throws IOException {
+        // 返回一帧字节；返回 null 表示对端关闭；可 unread 最多 PUSHBACK_SIZE 字节留给下一帧
+    }
+}
+```
+
+实例在所有连接间共享，**实现必须无状态**；读取超时（`read-timeout-millis`）可在解码器内部消化，
+用于「空闲即出帧」，否则不足一帧的数据要等到连接关闭才吐出。
+
+`demo/tcp-test.yml` 与 `com.csf.xline.app.codec.HeaderFrameDecoder` 是一个完整例子：
+`0x0A0B0C0D` 起始、整帧最长 100 字节，靠「下一个帧头 / 收满 100 字节 / 空闲」三种条件结束一帧。
 
 ## HTTP 节点
 

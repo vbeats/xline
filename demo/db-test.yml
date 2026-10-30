@@ -1,0 +1,21 @@
+# 数据库 + HTTP 节点测试配置（原 application.yml 中的测试节点）
+# 启动：java -jar target/xline.jar --spring.config.additional-location=file:./demo/db-test.yml
+#
+# db1 的业务处理器为 xline-app 的 Db1DataHandler：每秒查一次 stc 表并打印。
+xline:
+  nodes:
+    - name: db1
+      mssql:
+        host: 192.168.1.85
+        port: 1433
+        database-name: test
+        username: sa
+        password: 123456
+        encrypt: false
+        trust-server-certificate: true
+        flyway: false
+    # HTTP 节点：只写 type 不写 http 段，全部沿用 forest.* 全局配置
+    - name: api
+      type: http
+  struct:
+    db1:

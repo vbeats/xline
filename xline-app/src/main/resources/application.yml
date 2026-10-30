@@ -31,35 +31,12 @@ forest:
   log-request-headers: false
   log-response-headers: false
 
+# 本文件只放框架级配置，不含任何节点：
+# 节点与 struct 是测试配置，统一放在工程根目录的 demo/ 下，
+# 启动时用 --spring.config.additional-location 叠加（附加位置优先级更高，会整段覆盖 xline.nodes）。
+#   java -jar target/xline.jar --spring.config.additional-location=file:./demo/tcp-test.yml
+# 不叠加时 xline.nodes 为空，不初始化任何节点。
 xline:
-  nodes:
-    - name: db1
-      mssql:
-        host: 192.168.1.85
-        port: 1433
-        database-name: test
-        username: sa
-        password: 123456
-        encrypt: false
-        trust-server-certificate: true
-        flyway: false
-    # HTTP 节点：只写 type 不写 http 段，全部沿用 forest.* 全局配置
-    - name: api
-      type: http
-    # 串口节点：不注册业务处理器时，节点自动把读到的字节转发给下游、把上游数据写入串口
-    # - name: c1
-    #   serial-port:
-    #     device: COM1
-    #     baud-rate: 9600
-    # - name: c2
-    #   serial-port:
-    #     device: COM2
-    #     baud-rate: 9600
-  struct:
-    db1:
-    # 成对串口两个方向各配一条边，即可双向转发（c1 → c2、c2 → c1）
-    # c1:
-    #   - c2
-    # c2:
-    #   - c1
+  nodes: []
+  struct: {}
 

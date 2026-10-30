@@ -105,10 +105,24 @@ public abstract class AbstractNodeAutoConfiguration<N extends Node, H extends Da
      * @return 匹配到的处理器，无实现时为 {@code null}
      */
     private H resolveHandler(Map<String, H> handlers, String nodeName) {
-        if (handlers.isEmpty()) {
+        return resolveBean(handlers, nodeName);
+    }
+
+    /**
+     * 按节点名挑选运行期依赖：优先按 Bean 名与节点名匹配，无匹配时取唯一实现。
+     *
+     * <p>供需要额外运行期依赖的节点模块复用（如 tcp 节点挑选帧解码器）。
+     *
+     * @param beans    容器中该类型的全部 Bean，key 为 Bean 名
+     * @param nodeName 节点名
+     * @param <T>      依赖类型
+     * @return 匹配到的 Bean，无实现时为 {@code null}
+     */
+    protected <T> T resolveBean(Map<String, T> beans, String nodeName) {
+        if (beans.isEmpty()) {
             return null;
         }
-        H matched = handlers.get(nodeName);
-        return matched != null ? matched : handlers.values().iterator().next();
+        T matched = beans.get(nodeName);
+        return matched != null ? matched : beans.values().iterator().next();
     }
 }

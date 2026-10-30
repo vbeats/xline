@@ -43,6 +43,14 @@ public class TcpProperties {
     /** 接收缓冲区大小（字节） */
     private Integer bufferSize = 1024;
 
+    /**
+     * 读取超时（毫秒）：0 表示不启用（一直等满一帧）。
+     *
+     * <p>自定义帧解码器靠它做「空闲即出帧」：不足最大帧长、且后面没有新帧头时，
+     * 空闲超过该时长就把已收到的字节作为一帧交出，否则最后一帧要等到连接关闭才吐出。
+     */
+    private Integer readTimeoutMillis = 0;
+
     /** client 模式断线后是否自动重连 */
     private Boolean reconnect = Boolean.TRUE;
 

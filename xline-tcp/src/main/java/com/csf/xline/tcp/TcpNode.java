@@ -2,6 +2,7 @@ package com.csf.xline.tcp;
 
 import com.csf.xline.core.Node;
 import com.csf.xline.core.concurrent.ThreadFactoryProvider;
+import com.csf.xline.tcp.codec.TcpFrameDecoder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -12,7 +13,7 @@ import lombok.ToString;
  * <p>连接的建立与释放委托给 {@link TcpEndpoint}；
  * 生命周期与数据处理由 {@link Node} 的模板统一完成：
  * <ul>
- *     <li>收到对端数据 —— 以本节点为源头 {@code pushMsg} 推向下游；</li>
+ *     <li>收到对端数据 —— 按帧解码器解出一帧，以本节点为源头 {@code pushMsg} 推向下游；</li>
  *     <li>收到上游数据 —— 由业务处理器决定是否 {@link #send(Object)} 写往对端。</li>
  * </ul>
  */
@@ -28,6 +29,14 @@ public class TcpNode extends Node {
     @ToString.Exclude
     private transient ThreadFactoryProvider threadFactory;
 
+    /**
+     * 帧解码器：由装配阶段按节点名匹配注入，缺省按行分帧。
+     *
+     * <p>声明为 transient：仅存在于运行期。
+     */
+    @ToString.Exclude
+    private transient TcpFrameDecoder decoder;
+
     @Override
     protected void initDataSource() throws Exception {
         TcpEndpoint.start(this);
@@ -41,7 +50,7 @@ public class TcpNode extends Node {
     /**
      * 向对端发送数据：server 模式广播给全部在线连接，client 模式写往对端。
      *
-     * @param data 待发送数据，按 {@code charset} 编码写出
+     * @param data 待发送数据：{@code byte[]} 原样写出，其余按 {@code charset} 编码写出
      * @throws Exception 节点未初始化或写出失败
      */
     public void send(Object data) throws Exception {

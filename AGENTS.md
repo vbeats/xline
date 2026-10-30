@@ -78,7 +78,8 @@ java -jar target/xline.jar                        # 运行，端口 10010
 | 位置 | 内容 |
 | --- | --- |
 | `src/main/java` / `java-jdk8` / `java-jdk21` | 公共 / 分支专属源码，同一时刻只编译一个专属目录 |
-| `xline-app/src/main/resources/application.yml` | 节点与 `struct` 配置（必含 `spring.flyway.enabled: false`） |
+| `xline-app/src/main/resources/application.yml` | 仅框架级配置（必含 `spring.flyway.enabled: false`），不含节点 |
+| `demo/*.yml` | 测试用节点与 `struct` 配置；`java -jar target/xline.jar --spring.config.additional-location=file:./demo/<文件>.yml` 叠加（附加位置优先级更高，整段覆盖 `xline.nodes`） |
 | `xline-app/src/main/resources/logback-xline.xml` | 日志配置；`<conversionRule>` 用 `converterClass`，写成 `class` 会导致启动失败 |
 | `classpath:<数据库类型>/<节点名>` | Flyway 脚本目录（仅 `flyway: true` 的节点执行） |
 | `doc/` | 架构图产物 |

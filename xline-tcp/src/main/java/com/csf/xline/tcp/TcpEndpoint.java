@@ -65,6 +65,6 @@ public class TcpEndpoint {
     public static void send(TcpNode node, Object data) throws Exception {
         TcpLink link = LINKS.get(node.getName());
         Assert.notNull(link, String.format("【%s】 TCP 节点尚未初始化", node.getName()));
-        link.send(data == null ? "" : String.valueOf(data));
+        link.send(data);
     }
 }
