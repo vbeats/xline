@@ -1,0 +1,16 @@
+# SQLite 节点测试配置
+# 启动：java -jar target/xline.jar --spring.config.additional-location=file:./demo/sqlite-test.yml
+#
+# lite1：文件库，未指定 db-path 时默认使用 ./xline.db
+# lite-mem：内存库，进程结束即清空，适合快速验证节点装配与数据源注册
+xline:
+  nodes:
+    - name: lite1
+      sqlite:
+        db-path: ./demo/lite1.db
+    - name: lite-mem
+      sqlite:
+        db-path: ":memory:"
+  struct:
+    lite1:
+    lite-mem:

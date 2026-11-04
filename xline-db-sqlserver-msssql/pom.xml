@@ -35,6 +35,15 @@
             <groupId>org.anyline</groupId>
             <artifactId>anyline-environment-spring-data-jdbc</artifactId>
         </dependency>
+        <!--
+            spring-jdbc：anyline 把它声明为 provided 不向下传递，但其 Actuator
+            方法签名引用 JdbcTemplate / KeyHolder，运行期缺失时启动报
+            "Lookup method resolution failed"，必须显式补上（版本由 Boot BOM 管理）
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
 
         <!-- 微软官方 JDBC 驱动，版本由激活的 JDK profile 决定（jre8 / jre11 后缀） -->
         <dependency>
