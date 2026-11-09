@@ -23,14 +23,13 @@
         <!--
             Forest Spring Boot starter：自动初始化全局 Forest 配置（forest.* 配置项），
             并传递引入 forest-core（HTTP 能力本体）与 forest-spring。
-            starter 名称按分支切换：
-              JDK 21（SpringBoot 3 / 4）  forest-spring-boot3-starter
-              JDK 1.8（SpringBoot 1 / 2） forest-spring-boot-starter
+            Forest 1.8.0 起所有 SpringBoot 分支共用 forest-spring-boot-starter 这一个坐标，
+            不再按 JDK / SpringBoot 版本切换 artifact。
             JSON 由 core 引入的 Fastjson2 提供（Forest 自 1.5.36 起支持 Fastjson2）。
         -->
         <dependency>
             <groupId>com.dtflys.forest</groupId>
-            <artifactId>${forest.starter.artifactId}</artifactId>
+            <artifactId>forest-spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
 </project>

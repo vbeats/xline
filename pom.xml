@@ -55,25 +55,23 @@
         <web.starter.artifactId>spring-boot-starter-webmvc</web.starter.artifactId>
 
         <!-- ==================== 依赖版本（对齐 vline 各自分支的最新线） ==================== -->
-        <mybatis-plus.version>3.5.18</mybatis-plus.version>
+        <mybatis-plus.version>3.5.18.1</mybatis-plus.version>
         <!-- MyBatis-Plus starter 名称：SpringBoot 4.x 需专用 starter，由 profile 切换 -->
         <mybatis-plus.starter.artifactId>mybatis-plus-spring-boot4-starter</mybatis-plus.starter.artifactId>
-        <hutool.version>5.8.47</hutool.version>
+        <hutool.version>5.8.48</hutool.version>
         <druid.version>1.2.28</druid.version>
         <flyway.version>13.7.0</flyway.version>
         <mysql.version>26.7.0</mysql.version>
-        <postgresql.version>42.7.13</postgresql.version>
+        <postgresql.version>42.7.14</postgresql.version>
         <sqlite.version>3.53.4.0</sqlite.version>
         <sqlserver.version>13.6.0.jre11</sqlserver.version>
         <jtds.version>1.3.1</jtds.version>
 
         <!-- ==================== 基础依赖（由 xline-core 统一提供） ==================== -->
-        <netty.version>4.2.19.Final</netty.version>
-        <fastjson2.version>2.0.57</fastjson2.version>
-        <guava.version>33.4.8-jre</guava.version>
-        <forest.version>1.7.6</forest.version>
-        <!-- Forest starter 名称：Boot 1/2 与 Boot 3+ 是两个 artifact，由 profile 切换 -->
-        <forest.starter.artifactId>forest-spring-boot3-starter</forest.starter.artifactId>
+        <netty.version>4.2.20.Final</netty.version>
+        <fastjson2.version>2.0.66</fastjson2.version>
+        <guava.version>33.8.0-jre</guava.version>
+        <forest.version>1.8.1</forest.version>
         <!-- jSerialComm：串口通信库，两个 JDK 分支共用同一版本 -->
         <jserialcomm.version>2.11.4</jserialcomm.version>
 
@@ -217,9 +215,10 @@
             </dependency>
             <!--
                 Forest：声明式 HTTP 框架。
-                starter 名称按分支切换（Boot 1/2 与 Boot 3+ 是两个 artifact），
-                两者均传递 forest-core；此处同时登记原生核心包版本以保持依赖可控。
-                注意：starter 自身硬依赖 spring-boot 3.1.4，须由本工程的 BOM 覆盖
+                自 1.8.0 起所有 SpringBoot 分支合并为单一 starter 坐标 forest-spring-boot-starter
+                （1.x / 2.x / 3.x / 4.x 通用），无需再按分支切换 artifact；
+                此处同时登记原生核心包版本以保持依赖可控。
+                注意：starter 自身声明的 spring-boot 版本须由本工程的 BOM 覆盖
                 （已验证解析结果为当前分支的 spring-boot 版本）。
             -->
             <dependency>
@@ -230,11 +229,6 @@
             <dependency>
                 <groupId>com.dtflys.forest</groupId>
                 <artifactId>forest-spring-boot-starter</artifactId>
-                <version>${forest.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.dtflys.forest</groupId>
-                <artifactId>forest-spring-boot3-starter</artifactId>
                 <version>${forest.version}</version>
             </dependency>
             <!-- jSerialComm：串口通信（由 xline-serial-port 引入） -->
@@ -389,12 +383,11 @@
                 <disruptor.version>3.4.4</disruptor.version>
                 <flyway.version>9.22.3</flyway.version>
                 <mysql.version>8.4.0</mysql.version>
-                <postgresql.version>42.7.13</postgresql.version>
+                <postgresql.version>42.7.14</postgresql.version>
                 <!-- sqlite-jdbc 3.42+ 起要求 Java 11+，Java 8 线停在 3.41.x -->
                 <sqlite.version>3.41.2.2</sqlite.version>
                 <sqlserver.version>13.6.0.jre8</sqlserver.version>
                 <mybatis-plus.starter.artifactId>mybatis-plus-boot-starter</mybatis-plus.starter.artifactId>
-                <forest.starter.artifactId>forest-spring-boot-starter</forest.starter.artifactId>
             </properties>
             <dependencies>
 
@@ -437,11 +430,10 @@
                 <disruptor.version>4.0.0</disruptor.version>
                 <flyway.version>13.7.0</flyway.version>
                 <mysql.version>26.7.0</mysql.version>
-                <postgresql.version>42.7.13</postgresql.version>
+                <postgresql.version>42.7.14</postgresql.version>
                 <sqlite.version>3.53.4.0</sqlite.version>
                 <sqlserver.version>13.6.0.jre11</sqlserver.version>
                 <mybatis-plus.starter.artifactId>mybatis-plus-spring-boot4-starter</mybatis-plus.starter.artifactId>
-                <forest.starter.artifactId>forest-spring-boot3-starter</forest.starter.artifactId>
             </properties>
             <dependencies>
 

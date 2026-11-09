@@ -50,7 +50,8 @@ java -jar target/xline.jar                        # 运行，端口 10010
    `BeanUtil.copyProperties` 会以 `null` 调用未配置段的 setter。
 6. **不创建** `META-INF/spring.factories` 与 `AutoConfiguration.imports`：全部走组件扫描 + `@ConfigurationPropertiesScan`。
 7. **`application.yml` 必须保留** `spring.flyway.enabled: false`，否则 jdk8 分支启动即失败（Flyway 抢在节点就绪前取路由数据源连接）。
-8. **分支差异靠属性，不靠代码分支**：`${web.starter.artifactId}`、`${mybatis-plus.starter.artifactId}`、`${forest.starter.artifactId}` 由 profile 切换。
+8. **分支差异靠属性，不靠代码分支**：`${web.starter.artifactId}`、`${mybatis-plus.starter.artifactId}` 由 profile 切换；
+   Forest 自 1.8.0 起所有 SpringBoot 分支共用 `forest-spring-boot-starter`，不再切换。
 9. 构造器注入；不直接用 `ObjectMapper`（Jackson 2 仅为 anyline 运行期）；不引入 JPA / Bean Validation 等命名空间迁移件。
 10. **`Node` 的运行期字段不得生成 `getXxx` / `setXxx`**：`dataHandler` / `context` 一律标注 `@Getter(AccessLevel.NONE)` + `@Setter(AccessLevel.NONE)`，读取走 `dataHandler()` / `context()`，注入走 `attach(handler, context)`。
     ```java

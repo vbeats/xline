@@ -70,6 +70,8 @@ public class Db1DataHandler implements JtdsDataHandler, TimerTask {
 
         log.info("======> read data: {}", res);
 
+        node.pushMsg(res);
+
         timer.newTimeout(this, 1L, TimeUnit.SECONDS);
     }
 }
