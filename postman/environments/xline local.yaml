@@ -1,0 +1,6 @@
+name: xline local
+values:
+  - key: base_url
+    value: 'http://127.0.0.1:10010'
+    enabled: true
+    type: default

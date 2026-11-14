@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>xline · Runtime topology</title>
+    <link rel="stylesheet" th:href="@{/css/logicflow.css?v=1.0.0}">
+    <link rel="stylesheet" th:href="@{/css/xline.css?v=1.1.0}">
+</head>
+<body>
+<div id="app" class="app-shell">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="topbar">
+        <div class="brand-block">
+            <div class="brand-mark" aria-hidden="true">XL</div>
+            <div>
+                <p class="eyebrow">NODE FLOW RUNTIME</p>
+                <h1>xline control room</h1>
+            </div>
+        </div>
+        <div class="topbar-meta">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span>LOCAL INSTANCE</span>
+            <span class="separator" aria-hidden="true">/</span>
+            <span class="mono">10010</span>
+        </div>
+    </header>
+
+    <main id="main-content" class="content-grid" tabindex="-1">
+        <section class="intro-row" aria-labelledby="overview-heading">
+            <div>
+                <p class="eyebrow accent">RUNTIME OVERVIEW</p>
+                <h2 id="overview-heading">节点与数据流，一屏掌握</h2>
+                <p class="intro-copy">从配置到运行态，查看当前实例的节点清单与单向数据流拓扑。</p>
+            </div>
+            <button class="refresh-button" type="button" @click="loadOverview" :disabled="loading" aria-label="刷新运行概览">
+                <span class="refresh-icon" :class="{ spinning: loading }" aria-hidden="true">↻</span>
+                <span>{{ loading ? '同步中' : '刷新数据' }}</span>
+            </button>
+        </section>
+
+        <section class="metrics-grid" aria-label="运行统计">
+            <article class="metric-card">
+                <span class="metric-label">配置节点</span>
+                <strong class="metric-value">{{ overview.nodes.length }}</strong>
+                <span class="metric-note">CONFIGURED NODES</span>
+            </article>
+            <article class="metric-card metric-card-ready">
+                <span class="metric-label">已就绪</span>
+                <strong class="metric-value">{{ readyCount }}</strong>
+                <span class="metric-note">READY IN REGISTRY</span>
+            </article>
+            <article class="metric-card">
+                <span class="metric-label">数据流边</span>
+                <strong class="metric-value">{{ overview.edges.length }}</strong>
+                <span class="metric-note">STRUCT EDGES</span>
+            </article>
+            <article class="metric-card metric-card-accent">
+                <span class="metric-label">运行状态</span>
+                <strong class="metric-value status-value"><span class="status-indicator" aria-hidden="true"></span>在线</strong>
+                <span class="metric-note">APPLICATION READY</span>
+            </article>
+        </section>
+
+        <div v-if="error" class="alert" role="alert">
+            <strong>无法读取运行概览</strong>
+            <span>{{ error }}</span>
+            <button type="button" @click="loadOverview">重试</button>
+        </div>
+
+        <section class="workspace-grid" aria-label="拓扑与节点详情">
+            <article class="panel topology-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">DATA FLOW</p>
+                        <h3>拓扑结构</h3>
+                    </div>
+                    <span class="panel-count">{{ overview.edges.length }} EDGES</span>
+                </div>
+                <div class="graph-wrap">
+                    <div id="topology-graph" class="topology-graph" role="img" aria-label="xline 节点数据流拓扑图"></div>
+                    <div v-if="!loading && overview.nodes.length === 0" class="empty-state">
+                        <span class="empty-glyph" aria-hidden="true">○</span>
+                        <strong>暂无节点配置</strong>
+                        <span>在 xline.nodes 中添加节点后刷新此页面。</span>
+                    </div>
+                </div>
+                <div class="topology-legend" aria-label="拓扑图例">
+                    <span><i class="legend-swatch legend-ready"></i>已就绪</span>
+                    <span><i class="legend-swatch legend-pending"></i>待初始化</span>
+                    <span><i class="legend-line"></i>单向数据流</span>
+                </div>
+            </article>
+
+            <article class="panel detail-panel" aria-labelledby="detail-heading">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">NODE INSPECTOR</p>
+                        <h3 id="detail-heading">节点详情</h3>
+                    </div>
+                    <span v-if="selectedNode" class="type-pill">{{ selectedNode.type || 'unknown' }}</span>
+                </div>
+                <div v-if="selectedNode" class="node-detail">
+                    <div class="node-title-row">
+                        <div>
+                            <span class="detail-label">NODE NAME</span>
+                            <h4>{{ selectedNode.name || '未命名节点' }}</h4>
+                        </div>
+                        <span class="state-badge" :class="selectedNode.status.toLowerCase()">
+                            <i aria-hidden="true"></i>{{ selectedNode.status === 'READY' ? '已就绪' : '待初始化' }}
+                        </span>
+                    </div>
+                    <div class="property-list">
+                        <div v-for="section in propertySections" :key="section.key" class="property-section">
+                            <span class="property-section-title">{{ section.key }}</span>
+                            <dl>
+                                <template v-for="item in section.entries" :key="item.key">
+                                    <dt>{{ item.key }}</dt>
+                                    <dd class="mono">{{ formatValue(item.value) }}</dd>
+                                </template>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="selection-empty">
+                    <span class="selection-icon" aria-hidden="true">⌁</span>
+                    <strong>选择一个节点</strong>
+                    <span>点击拓扑中的节点查看配置属性。</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="panel nodes-panel" aria-labelledby="nodes-heading">
+            <div class="panel-heading table-heading">
+                <div>
+                    <p class="eyebrow">CONFIGURATION INVENTORY</p>
+                    <h3 id="nodes-heading">节点配置清单</h3>
+                </div>
+                <span class="panel-count">{{ overview.nodes.length }} NODES</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <caption class="sr-only">xline 节点配置与运行状态</caption>
+                    <thead>
+                    <tr>
+                        <th scope="col">节点名称</th>
+                        <th scope="col">类型</th>
+                        <th scope="col">运行状态</th>
+                        <th scope="col">配置段</th>
+                        <th scope="col">下游节点</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="node in overview.nodes" :key="node.name" :class="{ selected: selectedNode && selectedNode.name === node.name }" @click="selectNode(node)" @keydown.enter="selectNode(node)" tabindex="0">
+                        <td><span class="node-name"><i class="table-node-dot" :class="node.status.toLowerCase()"></i>{{ node.name || '未命名' }}</span></td>
+                        <td><span class="type-pill">{{ node.type || 'unknown' }}</span></td>
+                        <td><span class="table-status" :class="node.status.toLowerCase()"><i></i>{{ node.status === 'READY' ? 'READY' : 'PENDING' }}</span></td>
+                        <td><span class="section-count">{{ Object.keys(node.properties || {}).length }} sections</span></td>
+                        <td><span class="downstream-list">{{ downstream(node.name) || '—' }}</span></td>
+                    </tr>
+                    <tr v-if="!loading && overview.nodes.length === 0"><td colspan="5" class="table-empty">暂无配置节点</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer"><span>xline</span><span>NODE-BASED UNIDIRECTIONAL DATA FLOW</span><span class="mono">v1.0.0</span></footer>
+</div>
+<script th:src="@{/js/vue.global.prod.js?v=1.0.0}"></script>
+<script th:src="@{/js/logicflow.min.js?v=2.2.5}"></script>
+<script th:src="@{/js/xline-app.js?v=1.1.0}"></script>
+</body>
+</html>
