@@ -141,14 +141,14 @@
                 });
                 this.graph.setTheme({
                     rect: { radius: 6, stroke: '#4e8b92', strokeWidth: 1.5, fill: '#ffffff' },
-                    polyline: { stroke: '#2267b1', strokeWidth: 1.5, offset: 28 },
+                    polyline: { stroke: '#2267b1', strokeWidth: 2, offset: 28, endArrowType: 'solid' },
                     nodeText: { color: '#17313a', fontSize: 12 },
-                    arrow: { offset: 8, verticalLength: 5 }
+                    arrow: { offset: 10, verticalLength: 7, stroke: '#2267b1' }
                 });
                 this.graph.render({ nodes: nodes, edges: edges });
                 this.graph.on('node:click', function (event) {
                     var node = self.overview.nodes.find(function (item) {
-                        return 'node-' + item.name === event.data.node.id;
+                        return 'node-' + item.name === event.data.id;
                     });
                     if (node) {
                         self.selectNode(node);

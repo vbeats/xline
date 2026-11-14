@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>xline · Runtime topology</title>
     <link rel="stylesheet" th:href="@{/css/logicflow.css?v=1.0.0}">
-    <link rel="stylesheet" th:href="@{/css/xline.css?v=1.1.0}">
+    <link rel="stylesheet" th:href="@{/css/xline.css?v=1.2.0}">
 </head>
 <body>
 <div id="app" class="app-shell">
@@ -51,9 +51,9 @@
                 <span class="metric-note">READY IN REGISTRY</span>
             </article>
             <article class="metric-card">
-                <span class="metric-label">数据流边</span>
+                <span class="metric-label">数据流连接</span>
                 <strong class="metric-value">{{ overview.edges.length }}</strong>
-                <span class="metric-note">STRUCT EDGES</span>
+                <span class="metric-note">UPSTREAM → DOWNSTREAM</span>
             </article>
             <article class="metric-card metric-card-accent">
                 <span class="metric-label">运行状态</span>
@@ -75,7 +75,7 @@
                         <p class="eyebrow">DATA FLOW</p>
                         <h3>拓扑结构</h3>
                     </div>
-                    <span class="panel-count">{{ overview.edges.length }} EDGES</span>
+                    <span class="panel-count">{{ overview.edges.length }} CONNECTIONS</span>
                 </div>
                 <div class="graph-wrap">
                     <div id="topology-graph" class="topology-graph" role="img" aria-label="xline 节点数据流拓扑图"></div>
@@ -88,7 +88,7 @@
                 <div class="topology-legend" aria-label="拓扑图例">
                     <span><i class="legend-swatch legend-ready"></i>已就绪</span>
                     <span><i class="legend-swatch legend-pending"></i>待初始化</span>
-                    <span><i class="legend-line"></i>单向数据流</span>
+                    <span><i class="legend-line"></i>数据流方向</span>
                 </div>
             </article>
 
@@ -169,6 +169,6 @@
 </div>
 <script th:src="@{/js/vue.global.prod.js?v=1.0.0}"></script>
 <script th:src="@{/js/logicflow.min.js?v=2.2.5}"></script>
-<script th:src="@{/js/xline-app.js?v=1.1.0}"></script>
+    <script th:src="@{/js/xline-app.js?v=1.2.0}"></script>
 </body>
 </html>

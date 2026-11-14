@@ -20,8 +20,6 @@ import java.util.Map;
 @Controller
 public class XLineOverviewController {
 
-    private static final String MASKED_VALUE = "******";
-
     private final XLineProperties properties;
 
     public XLineOverviewController(XLineProperties properties) {
@@ -91,34 +89,33 @@ public class XLineOverviewController {
         addProperties(propertiesView, "http", node.getHttp());
         addProperties(propertiesView, "serialPort", node.getSerialPort());
         if (node.getExtra() != null && !node.getExtra().isEmpty()) {
-            propertiesView.put("extra", sanitize(node.getExtra()));
+            propertiesView.put("extra", serialize(node.getExtra()));
         }
         return propertiesView;
     }
 
     private void addProperties(Map<String, Object> target, String name, Object value) {
         if (value != null) {
-            target.put(name, sanitize(value));
+            target.put(name, serialize(value));
         }
     }
 
-    private Object sanitize(Object value) {
+    private Object serialize(Object value) {
         if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean || value instanceof Enum) {
-            return isSensitiveName(null) ? MASKED_VALUE : value;
+            return value;
         }
         if (value instanceof Map) {
             Map<?, ?> source = (Map<?, ?>) value;
             Map<String, Object> result = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : source.entrySet()) {
-                String key = String.valueOf(entry.getKey());
-                result.put(key, isSensitiveName(key) ? MASKED_VALUE : sanitize(entry.getValue()));
+                result.put(String.valueOf(entry.getKey()), serialize(entry.getValue()));
             }
             return result;
         }
         if (value instanceof Iterable) {
             List<Object> result = new ArrayList<>();
             for (Object item : (Iterable<?>) value) {
-                result.add(sanitize(item));
+                result.add(serialize(item));
             }
             return result;
         }
@@ -126,9 +123,7 @@ public class XLineOverviewController {
         for (Field field : fields(value.getClass())) {
             try {
                 field.setAccessible(true);
-                String key = field.getName();
-                Object fieldValue = field.get(value);
-                result.put(key, isSensitiveName(key) ? MASKED_VALUE : sanitize(fieldValue));
+                result.put(field.getName(), serialize(field.get(value)));
             } catch (IllegalAccessException ignored) {
                 // Public configuration objects are reflectively readable.
             }
@@ -150,11 +145,4 @@ public class XLineOverviewController {
         return fields;
     }
 
-    private boolean isSensitiveName(String name) {
-        if (name == null) {
-            return false;
-        }
-        String normalized = name.replace("-", "").replace("_", "").toLowerCase();
-        return normalized.contains("password") || normalized.contains("secret") || normalized.contains("token");
-    }
 }

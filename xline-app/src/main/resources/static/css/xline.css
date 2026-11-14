@@ -82,7 +82,8 @@ h3 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
 .topology-legend span { display: inline-flex; align-items: center; gap: 7px; }
 .legend-swatch { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
 .legend-pending { background: var(--warning); }
-.legend-line { width: 20px; height: 1px; background: var(--blue); }
+.legend-line { position: relative; width: 20px; height: 2px; background: var(--blue); }
+.legend-line::after { position: absolute; top: 50%; right: -1px; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid var(--blue); content: ''; transform: translateY(-50%); }
 .detail-panel { min-height: 576px; }
 .node-detail { padding: 22px; }
 .node-title-row { align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
