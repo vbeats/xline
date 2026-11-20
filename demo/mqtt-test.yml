@@ -1,0 +1,39 @@
+xline:
+  nodes:
+    - name: mqtt-input
+      mqtt:
+        broker: ${MQTT_BROKER:tcp://127.0.0.1:1883}
+        client-id: xline-input
+        username: ${MQTT_USERNAME:}
+        password: ${MQTT_PASSWORD:}
+        clean-start: true
+        session-expiry-interval-seconds: 0
+        connection-timeout-seconds: 10
+        keep-alive-interval-seconds: 60
+        operation-timeout-millis: 10000
+        automatic-reconnect: true
+        reconnect-min-delay-millis: 1000
+        reconnect-max-delay-millis: 128000
+        subscriptions:
+          - topic: xline/input/#
+            qos: 1
+            no-local: true
+        publish-topic: xline/output
+        publish-qos: 1
+        retained: false
+        will:
+          topic: xline/status/input
+          payload: offline
+          qos: 1
+          retained: true
+    - name: mqtt-output
+      mqtt:
+        broker: ${MQTT_BROKER:tcp://127.0.0.1:1883}
+        client-id: xline-output
+        username: ${MQTT_USERNAME:}
+        password: ${MQTT_PASSWORD:}
+        publish-topic: xline/output
+  # 下游 MqttDataHandler.rec 通过 node.publish(data) 发布；上游收到的是 MqttEnvelope。
+  struct:
+    mqtt-input:
+      - mqtt-output

@@ -69,6 +69,23 @@
             <artifactId>xline-serial-port</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-mqtt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-duckdb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-h2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-redis</artifactId>
+        </dependency>
+
         <!-- ORM 按需引入：starter 名称按分支切换（SpringBoot 4.x 需专用 starter） -->
         <dependency>
             <groupId>com.baomidou</groupId>

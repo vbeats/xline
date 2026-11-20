@@ -1,0 +1,13 @@
+xline:
+  nodes:
+    - name: analytics
+      duckdb:
+        db-path: ":memory:"
+        read-only: false
+        connection-properties:
+          threads: "2"
+          memory_limit: 256MB
+    - name: analytics-isolated
+      type: duckdb
+  # 每个节点独占连接，业务经 node.connection() 访问，节点关闭时释放。
+  struct: {}

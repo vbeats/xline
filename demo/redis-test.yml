@@ -1,0 +1,21 @@
+xline:
+  nodes:
+    - name: cache
+      redis:
+        address: ${REDIS_ADDRESS:redis://127.0.0.1:6379}
+        password: ${REDIS_PASSWORD:}
+        database: 0
+        connect-timeout-millis: 10000
+        timeout-millis: 3000
+        retry-attempts: 3
+        connection-minimum-idle-size: 1
+        connection-pool-size: 16
+        subscription-connection-minimum-idle-size: 1
+        subscription-connection-pool-size: 8
+        threads: 2
+        netty-threads: 2
+        shutdown-quiet-period-millis: 0
+        shutdown-timeout-millis: 5000
+  # config-location: classpath:redis/cache.yml 或 file:./redis.yml 替代内联连接配置。
+  # 外部 YAML 使用 Redisson 原生格式，可配置集群/哨兵等模式；默认编码为 StringCodec。
+  struct: {}

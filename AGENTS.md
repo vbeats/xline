@@ -28,7 +28,7 @@ java -jar target/xline.jar                        # 运行，端口 10010
 | core | `XLineEventHandler` | Disruptor 消费者，按 `struct` 投递下游 |
 | core | `XLineRoutingDataSource` | 实现 `javax.sql.DataSource`，按 `NodeContext` 路由 |
 | 节点模块 | `XxxNode` + `XxxNodeAutoConfiguration` + `XxxDataHandler` | 只声明 `nodeType()` / `nodeClass()` / `handlerClass()` |
-| app | `XlineApp` | 仅启动类，无 Controller、无 Web 配置 |
+| app | `XlineApp` / `XLineOverviewController` | 启动、运行概览页面 `/` 与接口 `/api/xline/overview`；展示配置须脱敏 |
 
 节点自推：`node.pushMsg(data)`（`INode` 契约方法，节点已自带名字与上下文，无节点名参数）；链路内部与业务一律用它，不要自行持有 `XLineContext`。
 `XLineContext.pushMsg(节点名, data)` 是按名注入事件总线的底层路由 API，节点名即 `struct` 的路由键，不能去掉。
@@ -62,6 +62,16 @@ java -jar target/xline.jar                        # 运行，端口 10010
     配置绑定器只识别 `setXxx`，生成 setter 就等于把运行期状态暴露成配置项。
 11. **类型配置段可选，节点实现必须容忍它为 null**：允许只写 `type: http` 不写 `http` 段（参考 `HttpClients.create` 兜底 `new HttpProperties()`）；
     只有真正用到必填字段时才报错（`HttpNode.url` 用 `Assert.notNull` 给出明确提示，不要抛 NPE）。
+12. **资源归节点所有**：销毁只关闭自身客户端/连接；`Node.init()` 失败会调用 `destroyDataSource()`，释放方法须容忍未初始化或重复调用。
+13. **不使用废弃 API**：Redisson 认证用 `Config.setUsername/setPassword`，Forest 重试用 `get/setMaxRetryCount`；构建加 `-Dmaven.compiler.showDeprecation=true` 检查。
+
+## MQTT / Redis / 嵌入式数据库
+
+- 配置段：`mqtt` / `redis` / `h2` / `duckdb`，用法与示例见 README、`demo/`。
+- MQTT 仅 v5；收到消息以 `MqttEnvelope` 推向下游，发布走 `node.publish()`；重连回调中禁止阻塞等待订阅确认。
+- Redis 内联配置由 Boot 绑定；`config-location` 则由 Redisson 读取原生 YAML，连接配置不与内联合并；资源用流读取，不能依赖 `getFile()`。
+- 两分支共用 Redisson 4.8、SnakeYAML 2.6；后者由根 POM 管理，避免 Boot 2 默认 1.x 导致 Redisson YAML 加载失败。
+- H2 接入 Druid / AnyLine / 路由数据源 / 可选 Flyway；DuckDB 只持有独立 JDBC 连接，不接入上述注册表和迁移。
 
 ## 新增一种节点类型
 

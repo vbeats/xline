@@ -27,7 +27,15 @@ public enum NodeType {
     HTTP("http"),
 
     /** SERIAL_PORT：以串口（232 / 485）收发数据的节点 */
-    SERIAL_PORT("serial-port");
+    SERIAL_PORT("serial-port"),
+
+    MQTT("mqtt"),
+
+    DUCKDB("duckdb"),
+
+    H2("h2"),
+
+    REDIS("redis");
 
     /** 配置段名 */
     private final String segment;

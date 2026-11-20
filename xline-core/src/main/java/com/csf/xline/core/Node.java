@@ -1,6 +1,10 @@
 package com.csf.xline.core;
 
+import com.csf.xline.core.duckdb.DuckdbProperties;
 import com.csf.xline.core.enums.NodeType;
+import com.csf.xline.core.h2.H2Properties;
+import com.csf.xline.core.mqtt.MqttProperties;
+import com.csf.xline.core.redis.RedisProperties;
 import com.csf.xline.core.handler.DataHandler;
 import com.csf.xline.core.mssql.MssqlProperties;
 import com.csf.xline.core.mysql.MysqlProperties;
@@ -34,7 +38,7 @@ import java.util.Map;
  * 各数据库节点只需实现这两个钩子，无需再编写重复的生命周期代码。
  *
  * <p>本类同时是 yml 配置的绑定载体，因此必须可实例化。
- * 可配置项只有 {@code name}、{@code type}、{@code extra} 与七个类型配置段；
+ * 可配置项只有 {@code name}、{@code type}、{@code extra} 与类型配置段；
  * 运行期状态（{@link #dataHandler} / {@link #context}）不生成 {@code getXxx} / {@code setXxx}，
  * 因而不会被配置绑定器识别为配置项，只能由装配阶段经 {@link #attach(DataHandler, XLineContext)} 注入。
  */
@@ -62,6 +66,14 @@ public class Node implements INode {
     private HttpProperties http;
 
     private SerialPortProperties serialPort;
+
+    private MqttProperties mqtt;
+
+    private DuckdbProperties duckdb;
+
+    private H2Properties h2;
+
+    private RedisProperties redis;
 
     /**
      * 业务数据处理实现，由装配阶段按节点名匹配注入。
@@ -160,6 +172,34 @@ public class Node implements INode {
         }
     }
 
+    public void setMqtt(MqttProperties mqtt) {
+        this.mqtt = mqtt;
+        if (mqtt != null) {
+            this.type = bindType(NodeType.MQTT);
+        }
+    }
+
+    public void setDuckdb(DuckdbProperties duckdb) {
+        this.duckdb = duckdb;
+        if (duckdb != null) {
+            this.type = bindType(NodeType.DUCKDB);
+        }
+    }
+
+    public void setH2(H2Properties h2) {
+        this.h2 = h2;
+        if (h2 != null) {
+            this.type = bindType(NodeType.H2);
+        }
+    }
+
+    public void setRedis(RedisProperties redis) {
+        this.redis = redis;
+        if (redis != null) {
+            this.type = bindType(NodeType.REDIS);
+        }
+    }
+
     /**
      * 注入运行期依赖：业务处理器与运行时上下文。
      *
@@ -197,11 +237,20 @@ public class Node implements INode {
 
     @Override
     public void init() throws Exception {
-        initDataSource();
-
-        DataHandler<Node> handler = handler();
-        if (handler != null) {
-            handler.init(this);
+        try {
+            initDataSource();
+            DataHandler<Node> handler = handler();
+            if (handler != null) {
+                handler.init(this);
+            }
+        } catch (Exception e) {
+            // 初始化失败的节点不会登记到 NODES，停机监听器无法替它释放资源。
+            try {
+                destroyDataSource();
+            } catch (Exception cleanup) {
+                e.addSuppressed(cleanup);
+            }
+            throw e;
         }
     }
 

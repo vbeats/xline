@@ -19,7 +19,11 @@
 | `xline-tcp` | TCP 节点（JDK socket） |
 | `xline-http` | HTTP 节点（Forest） |
 | `xline-serial-port` | 串口节点（jSerialComm，232 / 485） |
-| `xline-app` | 可启动应用（默认端口 10010，不提供任何 Web 接口） |
+| `xline-mqtt` | MQTT v5 节点（Paho，订阅与发布） |
+| `xline-redis` | Redis 节点（Redisson，内联或外部 YAML 配置） |
+| `xline-db-h2` | H2 节点（Druid、AnyLine、可选 Flyway） |
+| `xline-db-duckdb` | DuckDB 节点（独立 JDBC 连接） |
+| `xline-app` | 启动应用与运行概览（端口 10010，页面 `/`、接口 `/api/xline/overview`） |
 
 **不引入某个节点模块，对应类型的节点就永远不会被初始化**；SQL Server 的两个驱动模块二选一引入。
 
@@ -56,6 +60,10 @@ java -jar target/xline.jar --spring.config.additional-location=file:./demo/tcp-t
 | `demo/tcp-test.yml` | `node1`（server 9847）与 `node2`（client 127.0.0.1:8888）按 `0x0A0B0C0D` 帧头双向转发 |
 | `demo/serial-test.yml` | `c2`（COM2）与 `c3`（COM3）双向互传 |
 | `demo/db-test.yml` | `db1`（SQL Server）与 `api`（HTTP 节点） |
+| `demo/mqtt-test.yml` | MQTT v5 订阅、发布与遗嘱；需 broker，转发由处理器实现 |
+| `demo/redis-test.yml` | Redis 认证、连接池与超时；需 Redis 服务 |
+| `demo/h2-test.yml` | H2 内存库、连接池与仅声明类型的节点 |
+| `demo/duckdb-test.yml` | DuckDB 独立内存库与驱动参数 |
 
 ## 快速开始
 
@@ -93,7 +101,7 @@ public class ArchiveHandler implements SqliteDataHandler {
 `server.shutdown: graceful` 下，收到停止信号（Ctrl+C / systemd / 服务停止）时按序完成：
 
 1. 等待在途 Web 请求完成；
-2. `ContextClosedEvent` 由 `XLineShutdownListener` 统一销毁节点：先回调业务处理器的 `destroy`（数据源仍在，可做收尾写入），再释放节点资源 —— 关闭数据库连接池（Druid）并注销 anyline 数据源、关闭 TCP 连接与线程、释放串口占用并停掉重开线程；
+2. `ContextClosedEvent` 统一销毁节点：先回调处理器 `destroy`，再释放自身连接池、DuckDB 连接、MQTT/Redis 客户端、TCP 与串口资源；
 3. Spring 销毁剩余 Bean（含事件总线 Disruptor 的关闭），之后 JVM 退出（Ctrl+C 停机退出码 130）。
 
 大规模资源下销毁按「分组并行」执行：共享同一业务处理器的节点串行销毁（处理器实现可能非线程安全），其余节点并行，并行度取节点组数与 CPU 数的较小值；TCP server 节点的几十万客户端连接也是并行关闭。总时限 30 秒：单个节点销毁卡死不会无限期拖住停机，超时后中断并告警，剩余资源由操作系统回收。
@@ -103,7 +111,7 @@ public class ArchiveHandler implements SqliteDataHandler {
 
 ## 数据库节点
 
-配置字段：`host`、`port`、`database-name`、`username`、`password`、`driver-class-name`、`jdbc-url`、`flyway`。
+MySQL / PostgreSQL / SQL Server 配置字段：`host`、`port`、`database-name`、`username`、`password`、`driver-class-name`、`jdbc-url`、`flyway`。
 配置 `jdbc-url` 后忽略自动拼装；`flyway: true` 时按 `classpath:<数据库类型>/<节点名>` 执行迁移。
 
 | 数据库 | 默认端口 | 配置段 | 业务契约 |
@@ -113,6 +121,8 @@ public class ArchiveHandler implements SqliteDataHandler {
 | SQLite | — | `sqlite`（字段 `db-path`，支持 `:memory:`） | `SqliteDataHandler` |
 | SQL Server（mssql-jdbc） | 1433 | `mssql` | `MssqlDataHandler` |
 | SQL Server（jTDS） | 1433 | `mssql` | `JtdsDataHandler` |
+| H2 | — | `h2` | `H2DataHandler` |
+| DuckDB | — | `duckdb` | `DuckdbDataHandler` |
 
 SQL Server 额外支持 `instance`（实例名）、`domain`（域认证）、`encrypt`、`trust-server-certificate`。
 两个驱动模块的差异仅在 URL 拼接：
@@ -122,10 +132,48 @@ SQL Server 额外支持 `instance`（实例名）、`domain`（域认证）、`e
 | `xline-db-sqlserver-msssql` | `jdbc:sqlserver://host:1433;databaseName=db;encrypt=false;...` |
 | `xline-db-sqlserver-jtds` | `jdbc:jtds:sqlserver://host:1433/db` |
 
-数据源对外有两种用法：
+除 DuckDB 外，数据库节点的数据源对外有两种用法：
 
 - **anyline**：`ServiceProxy.service(节点名)` 直接取服务；
 - **MyBatis-Plus**：注入容器中的路由 `DataSource`，用 `NodeContext.use("节点名")` 指定节点（用完 `clear()`，未指定时路由到首个就绪节点）。
+
+### H2 / DuckDB
+
+- **H2**：默认内存库，以节点名作为库名；`mode: file` 配合 `db-path` 使用文件库，`jdbc-url` 优先。`pool.*` 配置连接池，`flyway` 开启迁移，`flyway-locations` 可覆盖默认脚本目录；也可用 `node.dataSource()`。
+- **DuckDB**：默认独立内存库；`db-path` 指定文件，`jdbc-url` 优先，`read-only` 控制只读，`connection-properties` 透传驱动参数。用 `node.connection()` 访问，不接入 AnyLine、路由数据源或 Flyway；连接由节点关闭。
+
+## MQTT 节点
+
+仅支持 MQTT v5。配置 `broker`、`client-id`（默认节点名）、`username/password`、`subscriptions`（主题与 QoS）、`publish-topic/publish-qos`；心跳、超时、自动重连、会话有效期和 `will` 见 [示例](demo/mqtt-test.yml)。
+
+- 收到消息自动以 `MqttEnvelope`（主题、字节载荷、QoS、保留/重复标记）推向下游。
+- 上游数据交给 `MqttDataHandler.rec`，由业务调用 `node.publish(data)` 或 `node.publish(topic, data)`；返回异步 token，不默认自动发布。
+- 重连后恢复订阅，每个节点独立持有和关闭客户端。
+
+## Redis 节点
+
+业务实现 `RedisDataHandler`，通过 `node.client()` 使用 Redisson，默认 `StringCodec`。支持两种配置，二选一：
+
+1. **内联**：`redis.address`、`username/password`、`database`、超时与连接池，见 [示例](demo/redis-test.yml)。
+2. **外部原生 YAML**：`config-location` 支持 `classpath:`（含 JAR 内资源）或 `file:`，替代内联连接配置，可配置集群、哨兵和自定义 codec；关闭时限仍取节点配置。
+
+```yaml
+# xline.nodes 中的节点
+- name: cache
+  redis:
+    config-location: classpath:redis/cache.yml
+```
+
+```yaml
+# redis/cache.yml：认证位于顶层；先设置环境变量 REDIS_PASSWORD
+username: default
+password: ${REDIS_PASSWORD}
+singleServerConfig:
+  address: redis://127.0.0.1:6379
+  database: 0
+```
+
+内联配置由 Spring Boot `@ConfigurationProperties` 绑定；外部文件由 `Config.fromYAML` 解析。两分支共用 Redisson 4.8，根 POM 固定 SnakeYAML 2.6，避免 Boot 2 默认版本不兼容。
 
 ## TCP 节点
 
@@ -258,8 +306,9 @@ public class C1Handler implements SerialPortDataHandler {
 | 配置 | 说明 |
 | --- | --- |
 | `xline.nodes[].name` | 节点名，用于 `struct`、处理器匹配与数据源注册 |
-| `xline.nodes[].type` | 节点类型（可选）：书写类型配置段时自动推断，也可显式声明；`http` 允许只写类型、不写配置段 |
-| `xline.nodes[].<类型段>` | 可选 `mysql` / `postgresql` / `sqlite` / `mssql` / `tcp` / `http` / `serial-port`，重复配置不同类型会报错 |
+| `xline.nodes[].type` | 节点类型（可选）：书写类型配置段时自动推断；`http` / `mqtt` / `redis` / `h2` / `duckdb` 支持仅声明类型 |
+| `xline.nodes[].<类型段>` | `mysql` / `postgresql` / `sqlite` / `mssql` / `tcp` / `http` / `serial-port` / `mqtt` / `redis` / `h2` / `duckdb`，一个节点只选一种 |
+| `xline.nodes[].extra` | 业务扩展配置 |
 | `xline.struct` | 单向拓扑：key 上游，value 下游列表 |
 | `forest.*` | Forest 全局配置（引入 `xline-http` 时生效） |
 | `spring.flyway.enabled` | 必须为 `false`：迁移由节点按 `flyway` 开关执行 |

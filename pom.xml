@@ -25,6 +25,10 @@
         <module>xline-tcp</module>
         <module>xline-http</module>
         <module>xline-serial-port</module>
+        <module>xline-mqtt</module>
+        <module>xline-db-duckdb</module>
+        <module>xline-db-h2</module>
+        <module>xline-redis</module>
         <module>xline-app</module>
     </modules>
 
@@ -66,6 +70,11 @@
         <sqlite.version>3.53.4.0</sqlite.version>
         <sqlserver.version>13.6.0.jre11</sqlserver.version>
         <jtds.version>1.3.1</jtds.version>
+        <h2.version>2.5.252</h2.version>
+        <duckdb.version>2.0.0.0</duckdb.version>
+        <redisson.version>4.8.0</redisson.version>
+        <snakeyaml.version>2.6</snakeyaml.version>
+        <paho.version>1.2.5</paho.version>
 
         <!-- ==================== 基础依赖（由 xline-core 统一提供） ==================== -->
         <netty.version>4.2.20.Final</netty.version>
@@ -139,7 +148,59 @@
                 <version>${revision}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-mqtt</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-duckdb</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-h2</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-redis</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
             <!-- ==================== 第三方（版本按 profile 差异化） ==================== -->
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.duckdb</groupId>
+                <artifactId>duckdb_jdbc</artifactId>
+                <version>${duckdb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <!-- Redisson 4.x YAML 加载需要 SnakeYAML 2.x，不能沿用 Boot 2 BOM 的 1.x。 -->
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.paho</groupId>
+                <artifactId>org.eclipse.paho.mqttv5.client</artifactId>
+                <version>${paho.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-data-jdbc-h2</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
             <dependency>
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
@@ -387,6 +448,7 @@
                 <!-- sqlite-jdbc 3.42+ 起要求 Java 11+，Java 8 线停在 3.41.x -->
                 <sqlite.version>3.41.2.2</sqlite.version>
                 <sqlserver.version>13.6.0.jre8</sqlserver.version>
+                <h2.version>2.2.224</h2.version>
                 <mybatis-plus.starter.artifactId>mybatis-plus-boot-starter</mybatis-plus.starter.artifactId>
             </properties>
             <dependencies>

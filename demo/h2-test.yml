@@ -1,0 +1,22 @@
+xline:
+  nodes:
+    - name: h2-local
+      h2:
+        mode: memory
+        database-name: xline_local
+        username: sa
+        password: ${H2_PASSWORD:}
+        pool:
+          initial-size: 1
+          min-idle: 1
+          max-active: 10
+          max-wait-millis: 30000
+          validation-query: SELECT 1
+          validation-query-timeout-seconds: 3
+          test-on-borrow: false
+          test-while-idle: true
+        flyway: false
+    - name: h2-isolated
+      type: h2
+  # file 模式使用 db-path: ./data/example；jdbc-url 非空时覆盖自动拼装。
+  struct: {}

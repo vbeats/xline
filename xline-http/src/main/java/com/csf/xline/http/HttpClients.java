@@ -56,9 +56,9 @@ public class HttpClients {
             configuration.setMaxConnections(maxConnections);
         }
 
-        Integer retryCount = first(properties.getRetryCount(), global == null ? null : global.getRetryCount());
+        Integer retryCount = first(properties.getRetryCount(), global == null ? null : global.getMaxRetryCount());
         if (retryCount != null) {
-            configuration.setRetryCount(retryCount);
+            configuration.setMaxRetryCount(retryCount);
         }
 
         String backendName = StringUtils.hasText(properties.getBackendName())

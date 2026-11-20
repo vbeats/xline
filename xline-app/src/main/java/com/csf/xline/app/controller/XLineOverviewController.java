@@ -6,7 +6,6 @@ import com.csf.xline.core.XLineProperties;
 import com.csf.xline.core.enums.NodeType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.lang.reflect.Field;
@@ -15,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Controller
@@ -88,6 +88,10 @@ public class XLineOverviewController {
         addProperties(propertiesView, "tcp", node.getTcp());
         addProperties(propertiesView, "http", node.getHttp());
         addProperties(propertiesView, "serialPort", node.getSerialPort());
+        addProperties(propertiesView, "mqtt", node.getMqtt());
+        addProperties(propertiesView, "duckdb", node.getDuckdb());
+        addProperties(propertiesView, "h2", node.getH2());
+        addProperties(propertiesView, "redis", node.getRedis());
         if (node.getExtra() != null && !node.getExtra().isEmpty()) {
             propertiesView.put("extra", serialize(node.getExtra()));
         }
@@ -108,7 +112,8 @@ public class XLineOverviewController {
             Map<?, ?> source = (Map<?, ?>) value;
             Map<String, Object> result = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : source.entrySet()) {
-                result.put(String.valueOf(entry.getKey()), serialize(entry.getValue()));
+                String key = String.valueOf(entry.getKey());
+                result.put(key, serializeProperty(key, entry.getValue()));
             }
             return result;
         }
@@ -123,12 +128,30 @@ public class XLineOverviewController {
         for (Field field : fields(value.getClass())) {
             try {
                 field.setAccessible(true);
-                result.put(field.getName(), serialize(field.get(value)));
+                result.put(field.getName(), serializeProperty(field.getName(), field.get(value)));
             } catch (IllegalAccessException ignored) {
                 // Public configuration objects are reflectively readable.
             }
         }
         return result;
+    }
+
+    private Object serializeProperty(String name, Object value) {
+        String key = name.replace("-", "").replace("_", "").replace(".", "").toLowerCase(Locale.ROOT);
+        if (value != null && (key.contains("password") || key.contains("secret") || key.contains("token")
+                || key.contains("credential") || key.contains("privatekey") || key.contains("apikey")
+                || key.equals("authorization") || key.equals("passphrase") || key.equals("pwd")
+                || key.equals("jdbcurl") || key.equals("connectionproperties"))) {
+            return "******";
+        }
+        if (value instanceof String) {
+            // 地址中的 user-info 和查询参数也可能包含凭据，不尝试逐个猜测参数名。
+            String text = (String) value;
+            if (text.contains("://") && (text.contains("@") || text.contains("?") || text.contains(";"))) {
+                return "******";
+            }
+        }
+        return serialize(value);
     }
 
     private List<Field> fields(Class<?> type) {
