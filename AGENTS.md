@@ -70,12 +70,13 @@ java -jar target/xline.jar                        # 运行，端口 10010
 - 配置段：`mqtt` / `redis` / `h2` / `duckdb`，用法与示例见 README、`demo/`。
 - MQTT 仅 v5；收到消息以 `MqttEnvelope` 推向下游，发布走 `node.publish()`；重连回调中禁止阻塞等待订阅确认。
 - Redis 内联配置由 Boot 绑定；`config-location` 则由 Redisson 读取原生 YAML，连接配置不与内联合并；资源用流读取，不能依赖 `getFile()`。
-- 两分支共用 Redisson 4.8、SnakeYAML 2.6；后者由根 POM 管理，避免 Boot 2 默认 1.x 导致 Redisson YAML 加载失败。
+- 两分支共用 Redisson 4.8、SnakeYAML 2.7；后者由根 POM 管理，避免 Boot 2 默认 1.x 导致 Redisson YAML 加载失败。
 - H2 接入 Druid / AnyLine / 路由数据源 / 可选 Flyway；DuckDB 只持有独立 JDBC 连接，不接入上述注册表和迁移。
 
 ## 新增一种节点类型
 
 1. core：`NodeType` 加枚举项 + `com.csf.xline.core.<类型>.XxxProperties`，并在 `Node` 加字段与判空 setter（字段须用 `@Data` 默认访问器，运行期字段才用 `AccessLevel.NONE`）；
+   接入 Druid 的关系型库继承 `core.jdbc.JdbcProperties`（网络库用 `JdbcServerProperties`），复用 `pool` / `connection-properties` / Flyway 配置；
 2. 新建模块：只引入该类型需要的依赖（数据库模块才引驱动、Druid、Flyway、anyline）；
 3. `XxxNode extends Node`：只实现 `initDataSource()` / `destroyDataSource()`；
 4. `XxxNodeAutoConfiguration extends AbstractNodeAutoConfiguration<XxxNode, XxxDataHandler>`：三个类型方法 + 构造器透传 `(XLineProperties, XLineContext)`（上下文明文地由装配模板统一注入）；需要额外运行期依赖时覆写 `beforeInit()`（参考 tcp 注入线程工厂、http 注入全局 ForestConfiguration）；

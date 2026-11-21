@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -83,6 +84,8 @@ public class SerialPortEndpoint {
         if (data instanceof byte[]) {
             return (byte[]) data;
         }
-        return String.valueOf(data).getBytes(Charset.forName(properties.getCharset()));
+        String charset = properties.getCharset();
+        return String.valueOf(data).getBytes(charset == null || charset.trim().isEmpty()
+                ? StandardCharsets.UTF_8 : Charset.forName(charset.trim()));
     }
 }

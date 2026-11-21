@@ -111,8 +111,43 @@ public class ArchiveHandler implements SqliteDataHandler {
 
 ## 数据库节点
 
-MySQL / PostgreSQL / SQL Server 配置字段：`host`、`port`、`database-name`、`username`、`password`、`driver-class-name`、`jdbc-url`、`flyway`。
-配置 `jdbc-url` 后忽略自动拼装；`flyway: true` 时按 `classpath:<数据库类型>/<节点名>` 执行迁移。
+MySQL / PostgreSQL / SQL Server 最少只需 `database-name`（或 `jdbc-url`）与账号，其余均有默认值：
+
+```yaml
+- name: db
+  mysql:
+    database-name: test        # 未配置 jdbc-url 时必填
+    username: root
+    password: root
+    # 以下均可省略
+    host: 127.0.0.1            # 默认 127.0.0.1
+    port: 3306                 # 默认该库标准端口
+    jdbc-url:                  # 配置后忽略按字段拼装
+    driver-class-name:         # 默认该库驱动
+    use-ssl: false             # 仅 MySQL，默认 false
+    server-timezone: GMT+8     # 仅 MySQL，默认 GMT+8
+    connection-properties:     # 额外驱动属性，原样传给驱动
+      connectTimeout: "5000"
+    pool:                      # Druid 连接池，以下为默认值
+      initial-size: 5
+      min-idle: 5
+      max-active: 10
+      max-wait-millis: 60000
+      validation-query: select 1
+      validation-query-timeout-seconds: 3
+      test-on-borrow: false
+      test-on-return: false
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      time-between-connect-error-millis: 5000   # 建连失败后的重试间隔，失败时持续重试
+    flyway: false              # 默认关闭
+    baseline-on-migrate: true
+    flyway-locations:          # 默认 classpath:<数据库类型>/<节点名>
+```
+
+PostgreSQL 额外支持 `schema`（拼为 `currentSchema`）。SQLite 支持除 `host` / `port` / `database-name` / 账号外的同名项；
+SQLite 配置段整体可省略（只写 `type: sqlite`），默认库文件 `xline.db`。
 
 | 数据库 | 默认端口 | 配置段 | 业务契约 |
 | --- | --- | --- | --- |
@@ -173,7 +208,7 @@ singleServerConfig:
   database: 0
 ```
 
-内联配置由 Spring Boot `@ConfigurationProperties` 绑定；外部文件由 `Config.fromYAML` 解析。两分支共用 Redisson 4.8，根 POM 固定 SnakeYAML 2.6，避免 Boot 2 默认版本不兼容。
+内联配置由 Spring Boot `@ConfigurationProperties` 绑定；外部文件由 `Config.fromYAML` 解析。两分支共用 Redisson 4.8，根 POM 固定 SnakeYAML 2.7，避免 Boot 2 默认版本不兼容。
 
 ## TCP 节点
 
@@ -187,6 +222,12 @@ singleServerConfig:
     append-new-line: true # 发送时追加换行（仅按行收发需要）
     read-timeout-millis: 0 # 读取超时：0 不启用；自定义帧解码器用它做「空闲即出帧」
     reconnect: true       # client 断线重连
+    reconnect-interval-millis: 3000
+    connect-timeout-millis: 5000 # client 建连超时，0 不限时
+    backlog: 50           # server 等待接入队列长度
+    keep-alive: false     # TCP keep-alive 探测
+    tcp-no-delay: false   # 关闭 Nagle，小包立即发送
+    buffer-size: 1024     # 接收缓冲（字节）
 ```
 
 - **对端 → 下游**：按帧解码器解出一帧（`byte[]`），以本节点为源头推给下游；
@@ -271,6 +312,7 @@ xline:
         stop-bits: 1                # 默认 1
         parity: 0                   # 0 无 / 1 奇 / 2 偶 / 3 MARK / 4 SPACE，默认 0
         use-rs485-mode: false       # 默认 false
+        flow-control: 0             # 流控位掩码：0 关闭 / 1 RTS / 16 CTS / 256 DSR / 4096 DTR / 65536 XON-XOFF 入 / 1048576 XON-XOFF 出
         reconnect: true             # 打开失败或串口拔出后自动重开，默认 true
         reconnect-interval-millis: 3000
         charset: UTF-8              # 上游推送文本数据时按此编码写出

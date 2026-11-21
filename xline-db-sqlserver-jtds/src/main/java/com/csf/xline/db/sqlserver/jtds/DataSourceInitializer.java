@@ -4,6 +4,7 @@ import com.alibaba.druid.DbType;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.enums.NodeType;
+import com.csf.xline.core.jdbc.JdbcPoolProperties;
 import com.csf.xline.core.mssql.MssqlProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.anyline.data.datasource.DataSourceHolder;
@@ -30,15 +31,14 @@ public class DataSourceInitializer {
     private static final String DEFAULT_DRIVER = "net.sourceforge.jtds.jdbc.Driver";
 
     public static void initDataSource(JtdsNode node) throws Exception {
-        MssqlProperties properties = node.getMssql();
-
-        if (!StringUtils.hasText(properties.getJdbcUrl())) {
-            properties.setJdbcUrl(buildUrl(properties));
-        }
+        MssqlProperties properties = node.getMssql() == null ? new MssqlProperties() : node.getMssql();
+        String jdbcUrl = properties.explicitJdbcUrl() != null ? properties.explicitJdbcUrl() : buildUrl(properties);
+        JdbcPoolProperties pool = properties.resolvedPool();
+        pool.validate(NodeType.MSSQL.getSegment());
 
         DruidDataSource ds = new DruidDataSource();
         ds.setName(node.getName());
-        ds.setUrl(properties.getJdbcUrl());
+        ds.setUrl(jdbcUrl);
         ds.setDbType(DbType.sqlserver);
 
         String driver = properties.resolvedDriverClassName();
@@ -46,20 +46,25 @@ public class DataSourceInitializer {
 
         ds.setUsername(properties.getUsername());
         ds.setPassword(properties.getPassword());
-        ds.setInitialSize(5);
-        ds.setMaxActive(10);
-        ds.setMinIdle(5);
-        ds.setMaxWait(60000L);
-        ds.setValidationQuery("select 1");
-        ds.setValidationQueryTimeout(2000);
-        ds.setTestOnBorrow(false);
-        ds.setTestOnReturn(false);
-        ds.setTestWhileIdle(true);
-        ds.setTimeBetweenEvictionRunsMillis(60000L);
-        ds.setMinEvictableIdleTimeMillis(300000L);
+        ds.setInitialSize(pool.getInitialSize());
+        ds.setMinIdle(pool.getMinIdle());
+        ds.setMaxActive(pool.getMaxActive());
+        ds.setMaxWait(pool.getMaxWaitMillis());
+        ds.setValidationQuery(pool.getValidationQuery());
+        ds.setValidationQueryTimeout(pool.getValidationQueryTimeoutSeconds());
+        ds.setTestOnBorrow(pool.isTestOnBorrow());
+        ds.setTestOnReturn(pool.isTestOnReturn());
+        ds.setTestWhileIdle(pool.isTestWhileIdle());
+        ds.setTimeBetweenEvictionRunsMillis(pool.getTimeBetweenEvictionRunsMillis());
+        // 先抬高最大回收时间，再设最小值：Druid 要求 min <= max
+        ds.setMaxEvictableIdleTimeMillis(Math.max(ds.getMaxEvictableIdleTimeMillis(),
+                pool.getMinEvictableIdleTimeMillis()));
+        ds.setMinEvictableIdleTimeMillis(pool.getMinEvictableIdleTimeMillis());
+        ds.setConnectProperties(properties.resolvedConnectionProperties(NodeType.MSSQL.getSegment()));
 
+        // 连接失败自动重试，避免因数据库短暂不可用导致节点不可用
         ds.setBreakAfterAcquireFailure(false);
-        ds.setTimeBetweenConnectErrorMillis(5000L);
+        ds.setTimeBetweenConnectErrorMillis(pool.getTimeBetweenConnectErrorMillis());
         ds.setConnectionErrorRetryAttempts(Integer.MAX_VALUE);
 
         DataRuntime dataRuntime = DataSourceHolder.reg(node.getName(), ds, DatabaseType.MSSQL);
@@ -69,11 +74,11 @@ public class DataSourceInitializer {
 
         log.info("【DataSource - Sql Server(jTDS)】reg success: {}", node.getName());
 
-        if (Boolean.TRUE.equals(properties.getFlyway())) {
+        if (properties.flywayEnabled()) {
             Flyway.configure()
                     .dataSource(ds)
-                    .baselineOnMigrate(true)
-                    .locations(String.format("classpath:%s/%s", NodeType.MSSQL.getSegment(), node.getName()))
+                    .baselineOnMigrate(properties.resolvedBaselineOnMigrate())
+                    .locations(properties.resolvedFlywayLocations(NodeType.MSSQL.getSegment(), node.getName()))
                     .load()
                     .migrate();
         }
@@ -102,7 +107,7 @@ public class DataSourceInitializer {
      */
     private static String buildUrl(MssqlProperties properties) {
         StringBuilder url = new StringBuilder(
-                String.format("jdbc:jtds:sqlserver://%s:%d", properties.getHost(), properties.resolvedPort()));
+                String.format("jdbc:jtds:sqlserver://%s:%d", properties.resolvedHost(), properties.resolvedPort()));
         if (StringUtils.hasText(properties.getDatabaseName())) {
             url.append('/').append(properties.getDatabaseName());
         }

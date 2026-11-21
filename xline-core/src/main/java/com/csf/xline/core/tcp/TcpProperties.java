@@ -2,6 +2,9 @@ package com.csf.xline.core.tcp;
 
 import lombok.Data;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 /**
  * TCP 节点配置段（{@code xline.nodes[].tcp}）。
  *
@@ -56,6 +59,19 @@ public class TcpProperties {
 
     /** 重连间隔（毫秒） */
     private Long reconnectIntervalMillis = 3000L;
+    /** client 模式建连超时（毫秒）：0 表示不限时 */
+    private Integer connectTimeoutMillis = 5000;
+    /** server 模式等待接入队列长度 */
+    private Integer backlog = 50;
+    /** 是否开启 TCP keep-alive 探测 */
+    private Boolean keepAlive = Boolean.FALSE;
+    /** 是否关闭 Nagle 算法（小包立即发送） */
+    private Boolean tcpNoDelay = Boolean.FALSE;
+
+    /** @return 生效字符编码，未配置时为 UTF-8 */
+    public Charset resolvedCharset() {
+        return charset == null || charset.trim().isEmpty() ? StandardCharsets.UTF_8 : Charset.forName(charset.trim());
+    }
 
     /**
      * 取生效端口。

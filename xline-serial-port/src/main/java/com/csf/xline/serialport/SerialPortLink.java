@@ -122,6 +122,7 @@ class SerialPortLink {
                     intValue(properties.getStopBits(), 1),
                     intValue(properties.getParity(), 0),
                     boolValue(properties.getUseRs485Mode(), false));
+            port.setFlowControl(intValue(properties.getFlowControl(), SerialPort.FLOW_CONTROL_DISABLED));
 
             if (!port.openPort()) {
                 log.warn("【SerialPort】{}【{}】 打开失败，串口不存在或被占用",

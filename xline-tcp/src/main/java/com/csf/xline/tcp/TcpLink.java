@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -54,7 +55,7 @@ class TcpLink {
     TcpLink(TcpNode node) {
         this.node = node;
         this.properties = node.getTcp();
-        this.charset = Charset.forName(properties.getCharset());
+        this.charset = properties.resolvedCharset();
         this.executor = Executors.newCachedThreadPool(threadFactory(node));
         this.decoder = node.getDecoder() == null ? new LineFrameDecoder() : node.getDecoder();
     }
@@ -68,7 +69,8 @@ class TcpLink {
         if (properties.getMode() == TcpProperties.Mode.SERVER) {
             InetAddress bind = StringUtils.hasText(properties.getHost())
                     ? InetAddress.getByName(properties.getHost()) : null;
-            serverSocket = new ServerSocket(properties.resolvedPort(), 50, bind);
+            int backlog = properties.getBacklog() == null || properties.getBacklog() <= 0 ? 50 : properties.getBacklog();
+            serverSocket = new ServerSocket(properties.resolvedPort(), backlog, bind);
             executor.execute(this::acceptLoop);
             return;
         }
@@ -159,7 +161,15 @@ class TcpLink {
     private void connectLoop() {
         while (running) {
             try {
-                Socket connected = new Socket(properties.getHost(), properties.resolvedPort());
+                Socket connected = new Socket();
+                Integer connectTimeout = properties.getConnectTimeoutMillis();
+                try {
+                    connected.connect(new InetSocketAddress(properties.getHost(), properties.resolvedPort()),
+                            connectTimeout == null || connectTimeout < 0 ? 0 : connectTimeout);
+                } catch (IOException e) {
+                    close(connected);
+                    throw e;
+                }
                 applyOptions(connected);
                 socket = connected;
                 log.info("【Tcp】已连接对端：{} -> {}:{}",
@@ -224,19 +234,20 @@ class TcpLink {
     }
 
     /**
-     * 应用 socket 选项：读取超时供帧解码器做「空闲即出帧」。
+     * 应用 socket 选项：keep-alive / no-delay，以及供帧解码器做「空闲即出帧」的读取超时。
      *
-     * <p>0 / 未配置时不设置，保持一直等待 —— 默认行为不受影响。
+     * <p>读取超时为 0 / 未配置时不设置，保持一直等待 —— 默认行为不受影响。
      */
     private void applyOptions(Socket target) {
-        Integer timeout = properties.getReadTimeoutMillis();
-        if (timeout == null || timeout <= 0) {
-            return;
-        }
         try {
-            target.setSoTimeout(timeout);
+            target.setKeepAlive(Boolean.TRUE.equals(properties.getKeepAlive()));
+            target.setTcpNoDelay(Boolean.TRUE.equals(properties.getTcpNoDelay()));
+            Integer timeout = properties.getReadTimeoutMillis();
+            if (timeout != null && timeout > 0) {
+                target.setSoTimeout(timeout);
+            }
         } catch (IOException e) {
-            log.warn("【Tcp】设置读取超时失败：{}", node.getName(), e);
+            log.warn("【Tcp】设置 socket 选项失败：{}", node.getName(), e);
         }
     }
 

@@ -32,6 +32,11 @@ public class SerialPortProperties {
 
     /** 是否使用 RS485 模式 */
     private Boolean useRs485Mode = Boolean.FALSE;
+    /**
+     * 流控（jSerialComm 位掩码，可相加）：0 关闭（默认）、1 RTS、16 CTS、256 DSR、4096 DTR、
+     * 65536 XON/XOFF 入、1048576 XON/XOFF 出。
+     */
+    private Integer flowControl = 0;
 
     /** 打开失败或串口断开（如 USB 拔掉）后是否自动重开 */
     private Boolean reconnect = Boolean.TRUE;

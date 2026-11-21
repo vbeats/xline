@@ -1,44 +1,52 @@
 package com.csf.xline.core.mysql;
 
+import com.csf.xline.core.jdbc.JdbcServerProperties;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import org.springframework.util.StringUtils;
 
 /**
  * MySQL 节点配置段（{@code xline.nodes[].mysql}）。
+ *
+ * <p>最少只需 {@code database-name}（或 {@code jdbc-url}）与账号，其余均有默认值。
  */
 @Data
-public class MysqlProperties {
-
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
+public class MysqlProperties extends JdbcServerProperties {
     /** MySQL 默认端口 */
     public static final int DEFAULT_PORT = 3306;
+    /** 默认驱动 */
+    public static final String DEFAULT_DRIVER = "com.mysql.cj.jdbc.Driver";
 
-    private String host;
+    /** 是否启用 SSL，默认关闭 */
+    private Boolean useSsl = Boolean.FALSE;
+    /** 会话时区，默认 GMT+8 */
+    private String serverTimezone = "GMT+8";
 
-    private Integer port;
-
-    /** yml 中写 database-name */
-    private String databaseName;
-
-    private String username;
-
-    private String password;
-
-    /** JDBC 驱动类名，未配置时使用驱动自带默认值 */
-    private String driverClassName;
-
-    /** 完整 JDBC 连接串，配置后忽略 host/port/database-name 拼装 */
-    private String jdbcUrl;
-
-    /** 是否执行 Flyway 迁移，默认关闭 */
-    private Boolean flyway = Boolean.FALSE;
-
-    /** 生效端口：未配置时使用默认端口 */
-    public int resolvedPort() {
-        return port == null || port <= 0 ? DEFAULT_PORT : port;
+    @Override
+    protected int defaultPort() {
+        return DEFAULT_PORT;
     }
 
-    /** 默认驱动类名 */
+    /** @return 生效驱动类名 */
     public String resolvedDriverClassName() {
-        return driverClassName == null || driverClassName.trim().isEmpty()
-                ? "com.mysql.cj.jdbc.Driver" : driverClassName;
+        return StringUtils.hasText(getDriverClassName()) ? getDriverClassName().trim() : DEFAULT_DRIVER;
+    }
+
+    /** @return 生效连接串：显式 {@code jdbc-url} 优先，否则按字段拼装 */
+    public String resolvedJdbcUrl() {
+        String explicit = explicitJdbcUrl();
+        if (explicit != null) {
+            return explicit;
+        }
+        String timezone = StringUtils.hasText(serverTimezone) ? serverTimezone.trim() : "GMT+8";
+        return String.format("jdbc:mysql://%s:%d/%s?useSSL=%s&useUnicode=true&characterEncoding=utf-8"
+                        + "&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true"
+                        + "&tinyInt1isBit=false&allowMultiQueries=true&serverTimezone=%s"
+                        + "&allowPublicKeyRetrieval=true",
+                resolvedHost(), resolvedPort(), requiredDatabaseName("mysql"),
+                Boolean.TRUE.equals(useSsl), timezone.replace("+", "%2B"));
     }
 }
