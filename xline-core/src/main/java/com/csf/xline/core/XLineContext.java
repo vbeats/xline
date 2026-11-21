@@ -1,12 +1,12 @@
 package com.csf.xline.core;
 
+import com.csf.xline.core.eventbus.XLineDispatcher;
 import com.csf.xline.core.eventbus.XLineEvent;
 import com.lmax.disruptor.RingBuffer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +40,8 @@ public class XLineContext {
 
     /** 事件总线，由事件总线配置在启动阶段回写，避免构造期循环依赖 */
     private volatile RingBuffer<XLineEvent> ringBuffer;
+    /** 下游节点分派器，与事件总线一同回写，用于推送前的反压等待 */
+    private volatile XLineDispatcher dispatcher;
 
     public XLineContext(XLineProperties props) {
         this.props = props;
@@ -49,8 +51,10 @@ public class XLineContext {
      * 绑定事件总线。
      *
      * @param ringBuffer 事件总线环形缓冲
+     * @param dispatcher 下游节点分派器
      */
-    public void bindRingBuffer(RingBuffer<XLineEvent> ringBuffer) {
+    public void bindBus(RingBuffer<XLineEvent> ringBuffer, XLineDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
         this.ringBuffer = ringBuffer;
     }
 
@@ -69,6 +73,11 @@ public class XLineContext {
         if (buffer == null) {
             log.warn("事件总线尚未就绪，消息被丢弃：节点 [{}]", nodeName);
             return;
+        }
+        // 下游处理不过来时，外部生产者在此等待（处理器内推送不等待），数据不丢
+        XLineDispatcher target = this.dispatcher;
+        if (target != null) {
+            target.awaitCapacity(nextNodes(nodeName));
         }
         long sequence = buffer.next();
         try {
@@ -95,6 +104,6 @@ public class XLineContext {
             return Collections.emptyList();
         }
         List<String> next = struct.get(nodeName);
-        return next == null ? new ArrayList<>() : next;
+        return next == null ? Collections.<String>emptyList() : next;
     }
 }

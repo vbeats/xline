@@ -21,7 +21,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 单个 TCP 节点的连接：监听 / 连接、按行读取、写出数据。
@@ -52,12 +56,24 @@ class TcpLink {
 
     private volatile boolean running = true;
 
+    /**
+     * 写出锁：同一节点的写出串行。用显式锁而非 {@code synchronized}，
+     * 避免 JDK 21 虚拟线程在阻塞写出时占住载体线程。
+     */
+    private final ReentrantLock writeLock = new ReentrantLock();
+
+    /** 上次拒绝连接告警时间：超出连接上限时限频告警 */
+    private volatile long lastRejectWarnMillis;
+
+    /** 写出超时看门狗：写出卡住超时即关闭该连接，使阻塞的 write 抛出异常返回；全部节点共用一个 daemon 线程 */
+    private static final ScheduledThreadPoolExecutor WATCHDOG = createWatchdog();
+
     TcpLink(TcpNode node) {
         this.node = node;
         this.properties = node.getTcp();
         this.charset = properties.resolvedCharset();
         this.executor = Executors.newCachedThreadPool(threadFactory(node));
-        this.decoder = node.getDecoder() == null ? new LineFrameDecoder() : node.getDecoder();
+        this.decoder = node.getDecoder() == null ? new LineFrameDecoder(intValue(properties.getMaxFrameLength(), LineFrameDecoder.DEFAULT_MAX_FRAME_LENGTH)) : node.getDecoder();
     }
 
     /**
@@ -89,18 +105,23 @@ class TcpLink {
      */
     void send(Object data) throws IOException {
         byte[] bytes = toBytes(data);
-        if (serverSocket != null) {
-            for (Socket client : clients) {
-                write(client, bytes);
+        writeLock.lock();
+        try {
+            if (serverSocket != null) {
+                for (Socket client : clients) {
+                    write(client, bytes);
+                }
+                return;
             }
-            return;
+            Socket target = socket;
+            if (target == null) {
+                log.warn("【Tcp】尚未连接对端，数据未发送：{}", node.getName());
+                return;
+            }
+            write(target, bytes);
+        } finally {
+            writeLock.unlock();
         }
-        Socket target = socket;
-        if (target == null) {
-            log.warn("【Tcp】尚未连接对端，数据未发送：{}", node.getName());
-            return;
-        }
-        write(target, bytes);
     }
 
     /**
@@ -144,6 +165,10 @@ class TcpLink {
         while (running && serverSocket != null && !serverSocket.isClosed()) {
             try {
                 Socket accepted = serverSocket.accept();
+                if (reachedMaxConnections()) {
+                    close(accepted);
+                    continue;
+                }
                 applyOptions(accepted);
                 clients.add(accepted);
                 log.info("【Tcp】客户端接入：{} <- {}", node.getName(), accepted.getRemoteSocketAddress());
@@ -220,17 +245,56 @@ class TcpLink {
         if (target == null || target.isClosed()) {
             return;
         }
+        ScheduledFuture<?> guard = null;
         try {
             OutputStream out = target.getOutputStream();
-            synchronized (target) {
-                out.write(bytes);
-                out.flush();
+            Integer timeout = properties.getWriteTimeoutMillis();
+            if (timeout != null && timeout > 0) {
+                guard = WATCHDOG.schedule(() -> {
+                    log.warn("【Tcp】写出超时（{} ms），断开对端：{} -> {}",
+                            timeout, node.getName(), target.getRemoteSocketAddress());
+                    close(target);
+                }, timeout, TimeUnit.MILLISECONDS);
             }
+            out.write(bytes);
+            out.flush();
         } catch (IOException e) {
             log.warn("【Tcp】写出失败，关闭连接：{}", node.getName(), e);
             clients.remove(target);
             close(target);
+        } finally {
+            if (guard != null) {
+                guard.cancel(false);
+            }
         }
+    }
+
+    /** server 模式：在线连接已达上限时拒绝新连接，并限频告警 */
+    private boolean reachedMaxConnections() {
+        Integer max = properties.getMaxConnections();
+        if (max == null || max <= 0 || clients.size() < max) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastRejectWarnMillis >= 10_000L) {
+            lastRejectWarnMillis = now;
+            log.warn("【Tcp】在线连接已达上限 {}，拒绝新连接：{}", max, node.getName());
+        }
+        return true;
+    }
+
+    private static ScheduledThreadPoolExecutor createWatchdog() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, runnable -> {
+            Thread thread = new Thread(runnable, "xline-tcp-write-watchdog");
+            thread.setDaemon(true);
+            return thread;
+        });
+        executor.setRemoveOnCancelPolicy(true);
+        return executor;
+    }
+
+    private static int intValue(Integer value, int defaultValue) {
+        return value == null || value <= 0 ? defaultValue : value;
     }
 
     /**

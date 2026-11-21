@@ -2,6 +2,8 @@ package com.csf.xline.core.concurrent;
 
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -25,5 +27,10 @@ public class VirtualThreadFactoryProvider implements ThreadFactoryProvider {
     public ThreadFactory create(String name) {
         // 虚拟线程命名：name-0、name-1 …… 便于日志与线程栈排查
         return Thread.ofVirtual().name(name + "-", 0).factory();
+    }
+
+    @Override
+    public ExecutorService newWorkerPool(String name, int threads) {
+        return Executors.newThreadPerTaskExecutor(create(name));
     }
 }

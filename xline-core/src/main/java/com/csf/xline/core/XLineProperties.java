@@ -1,5 +1,6 @@
 package com.csf.xline.core;
 
+import com.csf.xline.core.eventbus.XLineBusProperties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -38,4 +39,6 @@ public class XLineProperties {
 
     /** 数据流拓扑：key 为上游节点名，value 为下游节点名列表 */
     private Map<String, List<String>> struct = new LinkedHashMap<>();
+    /** 事件总线配置，未配置时使用默认值 */
+    private XLineBusProperties bus = new XLineBusProperties();
 }

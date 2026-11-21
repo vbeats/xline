@@ -1,5 +1,6 @@
 package com.csf.xline.core;
 
+import com.csf.xline.core.eventbus.XLineDispatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
@@ -30,7 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *     <li>再释放节点占用的资源 —— 数据库连接池、TCP 连接与线程、串口占用等；</li>
  *     <li>最后 Spring 销毁剩余 Bean（含事件总线 Disruptor 的关闭）。</li>
  * </ol>
- * 即：节点销毁早于事件总线关闭，销毁期间仍在途的事件依旧可被消费。
+ * 每个节点销毁前先从 {@code NODES} 摘除并关闭其待处理队列，销毁中的节点不会再收到数据；
+ * 其余尚未销毁的节点仍正常处理在途数据。
  *
  * <p>大规模资源（几十万 TCP 连接、大量串口）下的吞吐与鲁棒性：
  * <ul>
@@ -57,6 +59,12 @@ public class XLineShutdownListener implements ApplicationListener<ContextClosedE
 
     /** 销毁线程编号 */
     private static final AtomicInteger THREAD_INDEX = new AtomicInteger();
+
+    private final XLineDispatcher dispatcher;
+
+    public XLineShutdownListener(XLineDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
 
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
@@ -99,6 +107,9 @@ public class XLineShutdownListener implements ApplicationListener<ContextClosedE
                 executor.execute(() -> {
                     for (Node node : group) {
                         try {
+                            // 先摘除并关闭待处理队列：销毁中与销毁后的节点不再收到数据
+                            XLineContext.NODES.remove(node.getName(), node);
+                            dispatcher.close(node.getName());
                             node.destroy();
                         } catch (Exception e) {
                             log.error("节点 [{}] 销毁失败", node.getName(), e);
@@ -125,7 +136,10 @@ public class XLineShutdownListener implements ApplicationListener<ContextClosedE
                     DESTROY_TIMEOUT_MILLIS, String.join(", ", pending));
         }
 
-        int count = XLineContext.NODES.size();
+        int count = 0;
+        for (List<Node> group : groups.values()) {
+            count += group.size();
+        }
         XLineContext.NODES.clear();
         log.info("xline 节点销毁完成：{} 个", count);
     }

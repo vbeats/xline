@@ -228,6 +228,9 @@ singleServerConfig:
     keep-alive: false     # TCP keep-alive 探测
     tcp-no-delay: false   # 关闭 Nagle，小包立即发送
     buffer-size: 1024     # 接收缓冲（字节）
+    max-frame-length: 65536  # 默认按行分帧的单帧上限，攒满即出帧
+    max-connections: 0    # server 最大在线连接数，0 不限制
+    write-timeout-millis: 10000 # 单次写出超时，超时断开该连接；0 不限时
 ```
 
 - **对端 → 下游**：按帧解码器解出一帧（`byte[]`），以本节点为源头推给下游；
@@ -352,7 +355,18 @@ public class C1Handler implements SerialPortDataHandler {
 | `xline.nodes[].<类型段>` | `mysql` / `postgresql` / `sqlite` / `mssql` / `tcp` / `http` / `serial-port` / `mqtt` / `redis` / `h2` / `duckdb`，一个节点只选一种 |
 | `xline.nodes[].extra` | 业务扩展配置 |
 | `xline.struct` | 单向拓扑：key 上游，value 下游列表 |
+| `xline.bus.buffer-size` | 事件总线环形缓冲大小，默认 1024（向上取 2 的幂） |
+| `xline.bus.worker-threads` | 节点处理线程数，仅 JDK 8 分支生效，默认 CPU × 2（至少 4）；JDK 21 分支用虚拟线程 |
+| `xline.bus.node-queue-capacity` | 单节点待处理上限，默认 10000：达到后外部生产者等待（不丢数据），处理器内推送超过 2 倍时丢弃并告警 |
 | `forest.*` | Forest 全局配置（引入 `xline-http` 时生效） |
 | `spring.flyway.enabled` | 必须为 `false`：迁移由节点按 `flyway` 开关执行 |
+
+### 消息处理模型
+
+`node.pushMsg` → 环形缓冲 → 总线消费线程（只路由）→ 各下游节点的待处理队列 → 工作线程池执行 `DataHandler.rec`。
+
+- 同一节点的数据按到达顺序串行处理，同一节点不会被并发调用；不同节点并行，互不保证顺序；
+- 多个节点共用同一处理器实例时，该实例会被并发调用，须自行保证线程安全；
+- 慢节点只拖慢自己；处理器里再 `pushMsg` 不会与总线互相等待。
 
 开发约定、扩展步骤与双分支机制见 [AGENTS.md](AGENTS.md)。

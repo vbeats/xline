@@ -11,7 +11,10 @@ public class XLineEventExceptionHandler implements ExceptionHandler<XLineEvent> 
 
     @Override
     public void handleEventException(Throwable ex, long sequence, XLineEvent event) {
-        log.error("事件处理异常：sequence={}, event={}", sequence, event, ex);
+        // 不打印 payload：大数据量时 toString 本身就会放大内存与日志压力
+        log.error("事件处理异常：sequence={}, 源节点={}, 数据类型={}", sequence,
+                event == null ? null : event.getKey(),
+                event == null || event.getPayload() == null ? null : event.getPayload().getClass().getName(), ex);
     }
 
     @Override

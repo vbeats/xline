@@ -67,6 +67,15 @@ public class TcpProperties {
     private Boolean keepAlive = Boolean.FALSE;
     /** 是否关闭 Nagle 算法（小包立即发送） */
     private Boolean tcpNoDelay = Boolean.FALSE;
+    /** 默认按行分帧时的单帧上限（字节）：对端一直不发换行时攒满即出帧，防止内存溢出 */
+    private Integer maxFrameLength = 64 * 1024;
+    /** server 模式最大在线连接数：超出时拒绝新连接，0 表示不限制 */
+    private Integer maxConnections = 0;
+    /**
+     * 单次写出超时（毫秒）：对端不读数据导致写出卡住超过该时长即断开该连接，
+     * 避免一个慢对端拖住本节点的全部发送；0 表示不限时。
+     */
+    private Integer writeTimeoutMillis = 10000;
 
     /** @return 生效字符编码，未配置时为 UTF-8 */
     public Charset resolvedCharset() {

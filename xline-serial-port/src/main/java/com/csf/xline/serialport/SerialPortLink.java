@@ -92,8 +92,10 @@ class SerialPortLink {
             return;
         }
 
-        log.info("【SerialPort】{}【{}】 send data: {}",
-                node.getName(), properties.getDevice(), HexUtil.encodeHexStr(data, false));
+        if (log.isDebugEnabled()) {
+            log.debug("【SerialPort】{}【{}】 send data: {}",
+                    node.getName(), properties.getDevice(), HexUtil.encodeHexStr(data, false));
+        }
 
         int written = port.writeBytes(data, data.length);
         if (written < data.length) {
@@ -161,8 +163,10 @@ class SerialPortLink {
             }
             byte[] data = read == buffer.length ? buffer : Arrays.copyOf(buffer, read);
 
-            log.info("【SerialPort】{}【{}】 receive data: {}",
-                    node.getName(), properties.getDevice(), HexUtil.encodeHexStr(data, false));
+            if (log.isDebugEnabled()) {
+                log.debug("【SerialPort】{}【{}】 receive data: {}",
+                        node.getName(), properties.getDevice(), HexUtil.encodeHexStr(data, false));
+            }
 
             node.pushMsg(data);
         }

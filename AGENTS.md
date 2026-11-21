@@ -25,7 +25,7 @@ java -jar target/xline.jar                        # 运行，端口 10010
 | core | `Node` / `INode` | 配置绑定载体 + 生命周期模板（`init` / `destroy` / `receiveData` / `pushMsg`）；可配置项只有 `name` / `type` / `extra` 与类型段 |
 | core | `AbstractNodeAutoConfiguration<N,H>` | 装配模板：筛选 → 拷贝 → 匹配处理器 → `beforeInit` → 初始化 → 登记 |
 | core | `XLineContext` | `NODES` / `DATA_SOURCES` 注册表、`pushMsg(节点名, data)`（底层路由 API，业务不用） |
-| core | `XLineEventHandler` | Disruptor 消费者，按 `struct` 投递下游 |
+| core | `XLineEventHandler` / `XLineDispatcher` | Disruptor 唯一消费者只按 `struct` 路由；`XLineDispatcher` 为每个下游节点维护待处理队列，在工作线程池中异步执行（节点内串行、节点间并行） |
 | core | `XLineRoutingDataSource` | 实现 `javax.sql.DataSource`，按 `NodeContext` 路由 |
 | 节点模块 | `XxxNode` + `XxxNodeAutoConfiguration` + `XxxDataHandler` | 只声明 `nodeType()` / `nodeClass()` / `handlerClass()` |
 | app | `XlineApp` / `XLineOverviewController` | 启动、运行概览页面 `/` 与接口 `/api/xline/overview`；展示配置须脱敏 |
@@ -33,6 +33,7 @@ java -jar target/xline.jar                        # 运行，端口 10010
 节点自推：`node.pushMsg(data)`（`INode` 契约方法，节点已自带名字与上下文，无节点名参数）；链路内部与业务一律用它，不要自行持有 `XLineContext`。
 `XLineContext.pushMsg(节点名, data)` 是按名注入事件总线的底层路由 API，节点名即 `struct` 的路由键，不能去掉。
 节点在 `ApplicationReadyEvent` 初始化（晚于 `CommandLineRunner`）。
+总线消费线程与工作线程都不得阻塞等待：反压只在外部生产者（非工作线程）的 `pushMsg` 中等待；JDK 21 下阻塞 IO 外不要包 `synchronized`（会占住虚拟线程的载体线程），用 `ReentrantLock`。
 
 ## 红线
 

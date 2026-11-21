@@ -1,5 +1,6 @@
 package com.csf.xline.core.concurrent;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -31,4 +32,16 @@ public interface ThreadFactoryProvider {
      * @return 线程工厂
      */
     ThreadFactory create(String name);
+
+    /**
+     * 创建节点数据处理用的工作线程池。
+     *
+     * <p>JDK 21 分支每个任务一个虚拟线程（忽略 {@code threads}）；
+     * JDK 1.8 分支为固定大小的平台线程池。
+     *
+     * @param name    线程名前缀
+     * @param threads 平台线程数
+     * @return 工作线程池
+     */
+    ExecutorService newWorkerPool(String name, int threads);
 }
