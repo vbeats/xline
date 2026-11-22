@@ -11,6 +11,7 @@
 | 模块 | 说明 |
 | --- | --- |
 | `xline-core` | 节点模型、struct 拓扑、事件总线、数据处理契约、配置载体、基础依赖 |
+| `xline-db-support` | 关系型数据库节点共用的 Druid、AnyLine 与 Flyway 支撑 |
 | `xline-db-mysql` | MySQL 节点 |
 | `xline-db-postgresql` | PostgreSQL 节点 |
 | `xline-db-sqlite` | SQLite 节点 |

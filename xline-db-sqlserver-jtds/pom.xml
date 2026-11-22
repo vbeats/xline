@@ -19,30 +19,9 @@
             <groupId>com.csf.xline</groupId>
             <artifactId>xline-core</artifactId>
         </dependency>
-
-        <!-- 连接池与数据库迁移：数据库模块专用，不进入 core 等公共依赖 -->
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-        </dependency>
-
-        <!-- anyline：数据源注册环境（vline 同款），由各数据库模块自行引入 -->
-        <dependency>
-            <groupId>org.anyline</groupId>
-            <artifactId>anyline-environment-spring-data-jdbc</artifactId>
-        </dependency>
-        <!--
-            spring-jdbc：anyline 把它声明为 provided 不向下传递，但其 Actuator
-            方法签名引用 JdbcTemplate / KeyHolder，运行期缺失时启动报
-            "Lookup method resolution failed"，必须显式补上（版本由 Boot BOM 管理）
-        -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-jdbc</artifactId>
+            <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-support</artifactId>
         </dependency>
 
         <!-- jTDS：开源 SQL Server 驱动，适用于需兼容旧版 SQL Server 的场景 -->

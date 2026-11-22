@@ -46,7 +46,7 @@ public class HttpNode extends Node {
 
     @Override
     protected void destroyDataSource() throws Exception {
-        HttpClients.destroy(this);
+        configuration = null;
     }
 
     /**
@@ -66,6 +66,7 @@ public class HttpNode extends Node {
      * @return 接口代理实例
      */
     public <T> T client(Class<T> api) {
+        Assert.state(configuration != null, String.format("【%s】 HTTP 节点尚未初始化", getName()));
         return configuration.client(api);
     }
 

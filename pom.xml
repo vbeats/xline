@@ -17,6 +17,7 @@
 
     <modules>
         <module>xline-core</module>
+        <module>xline-db-support</module>
         <module>xline-db-mysql</module>
         <module>xline-db-postgresql</module>
         <module>xline-db-sqlite</module>
@@ -105,6 +106,11 @@
             <dependency>
                 <groupId>com.csf.xline</groupId>
                 <artifactId>xline-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-support</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -334,23 +340,10 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- 配置属性元数据处理器，编译期生成 spring-configuration-metadata.json -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -451,18 +444,6 @@
                 <h2.version>2.2.224</h2.version>
                 <mybatis-plus.starter.artifactId>mybatis-plus-boot-starter</mybatis-plus.starter.artifactId>
             </properties>
-            <dependencies>
-
-                <!-- anyline 运行期使用的 Jackson 2 线，版本由 SpringBoot 2.7 BOM 统一管理 -->
-                <dependency>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </dependency>
-                <dependency>
-                    <groupId>com.fasterxml.jackson.datatype</groupId>
-                    <artifactId>jackson-datatype-jsr310</artifactId>
-                </dependency>
-            </dependencies>
         </profile>
 
         <!-- ========================================================================
@@ -497,24 +478,21 @@
                 <sqlserver.version>13.6.2.jre11</sqlserver.version>
                 <mybatis-plus.starter.artifactId>mybatis-plus-spring-boot4-starter</mybatis-plus.starter.artifactId>
             </properties>
-            <dependencies>
-
-                <!--
-                    anyline 运行期依赖 Jackson 2（com.fasterxml.jackson.*）。
-                    SpringBoot 4.x 只带 Jackson 3（tools.jackson.*，vline 亦单独引入），
-                    两者包名不同互不影响，此处补齐 anyline 所需的 Jackson 2 线。
-                -->
-                <dependency>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                    <version>${jackson.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>com.fasterxml.jackson.datatype</groupId>
-                    <artifactId>jackson-datatype-jsr310</artifactId>
-                    <version>${jackson.version}</version>
-                </dependency>
-            </dependencies>
+            <dependencyManagement>
+                <dependencies>
+                    <!-- SpringBoot 4.x 只管理 Jackson 3，AnyLine 仍需要 Jackson 2。 -->
+                    <dependency>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                        <version>${jackson.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>com.fasterxml.jackson.datatype</groupId>
+                        <artifactId>jackson-datatype-jsr310</artifactId>
+                        <version>${jackson.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
         </profile>
     </profiles>
 </project>

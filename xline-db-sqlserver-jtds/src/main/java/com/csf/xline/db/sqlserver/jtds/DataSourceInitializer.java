@@ -1,20 +1,12 @@
 package com.csf.xline.db.sqlserver.jtds;
 
 import com.alibaba.druid.DbType;
-import com.alibaba.druid.pool.DruidDataSource;
-import com.csf.xline.core.XLineContext;
 import com.csf.xline.core.enums.NodeType;
-import com.csf.xline.core.jdbc.JdbcPoolProperties;
 import com.csf.xline.core.mssql.MssqlProperties;
-import lombok.extern.slf4j.Slf4j;
-import org.anyline.data.datasource.DataSourceHolder;
-import org.anyline.data.runtime.DataRuntime;
+import com.csf.xline.db.support.DruidDataSourceSpec;
+import com.csf.xline.db.support.DruidDataSourceSupport;
 import org.anyline.metadata.type.DatabaseType;
-import org.flywaydb.core.Flyway;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import javax.sql.DataSource;
 
 /**
  * SQL Server 数据源初始化（jTDS 驱动）。
@@ -24,7 +16,6 @@ import javax.sql.DataSource;
  * 且不支持 {@code encrypt} / {@code trustServerCertificate}
  * （jTDS 的加密走 {@code ssl} 属性，需加密请直接配置 jdbcUrl）。
  */
-@Slf4j
 public class DataSourceInitializer {
 
     /** jTDS 驱动 */
@@ -33,55 +24,15 @@ public class DataSourceInitializer {
     public static void initDataSource(JtdsNode node) throws Exception {
         MssqlProperties properties = node.getMssql() == null ? new MssqlProperties() : node.getMssql();
         String jdbcUrl = properties.explicitJdbcUrl() != null ? properties.explicitJdbcUrl() : buildUrl(properties);
-        JdbcPoolProperties pool = properties.resolvedPool();
-        pool.validate(NodeType.MSSQL.getSegment());
-
-        DruidDataSource ds = new DruidDataSource();
-        ds.setName(node.getName());
-        ds.setUrl(jdbcUrl);
-        ds.setDbType(DbType.sqlserver);
-
         String driver = properties.resolvedDriverClassName();
-        ds.setDriverClassName(driver == null ? DEFAULT_DRIVER : driver);
-
-        ds.setUsername(properties.getUsername());
-        ds.setPassword(properties.getPassword());
-        ds.setInitialSize(pool.getInitialSize());
-        ds.setMinIdle(pool.getMinIdle());
-        ds.setMaxActive(pool.getMaxActive());
-        ds.setMaxWait(pool.getMaxWaitMillis());
-        ds.setValidationQuery(pool.getValidationQuery());
-        ds.setValidationQueryTimeout(pool.getValidationQueryTimeoutSeconds());
-        ds.setTestOnBorrow(pool.isTestOnBorrow());
-        ds.setTestOnReturn(pool.isTestOnReturn());
-        ds.setTestWhileIdle(pool.isTestWhileIdle());
-        ds.setTimeBetweenEvictionRunsMillis(pool.getTimeBetweenEvictionRunsMillis());
-        // 先抬高最大回收时间，再设最小值：Druid 要求 min <= max
-        ds.setMaxEvictableIdleTimeMillis(Math.max(ds.getMaxEvictableIdleTimeMillis(),
-                pool.getMinEvictableIdleTimeMillis()));
-        ds.setMinEvictableIdleTimeMillis(pool.getMinEvictableIdleTimeMillis());
-        ds.setConnectProperties(properties.resolvedConnectionProperties(NodeType.MSSQL.getSegment()));
-
-        // 连接失败自动重试，避免因数据库短暂不可用导致节点不可用
-        ds.setBreakAfterAcquireFailure(false);
-        ds.setTimeBetweenConnectErrorMillis(pool.getTimeBetweenConnectErrorMillis());
-        ds.setConnectionErrorRetryAttempts(Integer.MAX_VALUE);
-
-        DataRuntime dataRuntime = DataSourceHolder.reg(node.getName(), ds, DatabaseType.MSSQL);
-        Assert.notNull(dataRuntime, String.format("【%s】 DataSource Init Failed", node.getName()));
-
-        XLineContext.DATA_SOURCES.put(node.getName(), ds);
-
-        log.info("【DataSource - Sql Server(jTDS)】reg success: {}", node.getName());
-
-        if (properties.flywayEnabled()) {
-            Flyway.configure()
-                    .dataSource(ds)
-                    .baselineOnMigrate(properties.resolvedBaselineOnMigrate())
-                    .locations(properties.resolvedFlywayLocations(NodeType.MSSQL.getSegment(), node.getName()))
-                    .load()
-                    .migrate();
-        }
+        DruidDataSourceSpec spec = new DruidDataSourceSpec(
+                node.getName(), NodeType.MSSQL, DbType.sqlserver, DatabaseType.MSSQL)
+                .setJdbcUrl(jdbcUrl)
+                .setDriverClassName(driver == null ? DEFAULT_DRIVER : driver)
+                .setUsername(properties.getUsername())
+                .setPassword(properties.getPassword())
+                .setLogName("Sql Server(jTDS)");
+        DruidDataSourceSupport.initialize(properties, spec);
     }
 
     /**
@@ -91,12 +42,7 @@ public class DataSourceInitializer {
      * @throws Exception anyline 注销数据源失败
      */
     public static void destroy(JtdsNode node) throws Exception {
-        DataSourceHolder.destroy(node.getName());
-
-        DataSource dataSource = XLineContext.DATA_SOURCES.remove(node.getName());
-        if (dataSource instanceof DruidDataSource) {
-            ((DruidDataSource) dataSource).close();
-        }
+        DruidDataSourceSupport.destroy(node.getName());
     }
 
     /**

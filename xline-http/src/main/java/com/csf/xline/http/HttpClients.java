@@ -5,11 +5,8 @@ import com.dtflys.forest.config.ForestConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
- * HTTP 节点的 Forest 配置登记。
+ * HTTP 节点的 Forest 配置创建器。
  *
  * <p>每个节点一份独立配置（地址、超时、重试、连接池互不干扰）。
  * 节点未配置的项沿用 Forest 全局配置 —— 全局配置由 starter 按 {@code forest.*} 自动初始化，
@@ -17,9 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 public class HttpClients {
-
-    /** 已创建的节点配置：key 为节点名 */
-    private static final Map<String, ForestConfiguration> CONFIGS = new ConcurrentHashMap<>();
 
     /**
      * 按节点配置创建 Forest 配置。
@@ -71,22 +65,10 @@ public class HttpClients {
             configuration.setLogEnabled(properties.getLogEnabled());
         }
 
-        CONFIGS.put(node.getName(), configuration);
         log.info("【Http - Forest】created: {} -> {}（{}）",
                 node.getName(), describeBaseUrl(properties),
                 global == null ? "仅节点配置" : "节点配置优先，未配项沿用全局");
         return configuration;
-    }
-
-    /**
-     * 移除节点配置。
-     *
-     * @param node HTTP 节点
-     */
-    public static void destroy(HttpNode node) {
-        if (CONFIGS.remove(node.getName()) != null) {
-            log.info("【Http - Forest】destroyed: {}", node.getName());
-        }
     }
 
     /** 节点值优先，其次全局值 */
