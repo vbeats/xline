@@ -1,105 +1,71 @@
 # AGENTS.md
 
-xline：Maven 多模块、节点式单向数据流框架，一套 Java 8 语法源码同时支持 JDK 8（SpringBoot 2.7）与 JDK 21（SpringBoot 4.1）。
-本文件只写"动手前必须知道"的东西；模块用法见 [README.md](README.md)，架构图见 [doc/xline-architecture.html](doc/xline-architecture.html)。
+xline 是 Maven 多模块、节点式单向数据流框架；同一套 Java 8 语法源码同时支持 JDK 8（Spring Boot 2.7）与 JDK 21（Spring Boot 4.1）。模块用法见 [README.md](README.md)，架构图见 [doc/xline-architecture.png](doc/xline-architecture.png) 与 [交互版](doc/xline-architecture.html)。
 
-## 命令
+## 验证命令
 
 ```bash
-mvn clean install -DskipTests                  # 默认按当前 JDK 选分支
-mvn -P '!jdk21,jdk8' clean install -DskipTests # 强制 jdk8 分支（两 profile 互斥，不能只写 -Pjdk8）
-mvn -pl xline-http -am clean install -DskipTests   # 单模块改动
-java -jar target/xline.jar                        # 运行，端口 10010
+mvn clean install -DskipTests
+mvn -P '!jdk21,jdk8' clean install -DskipTests
+java -jar target/xline.jar --spring.config.additional-location=file:./demo/h2-test.yml
 ```
 
-- 仓库**没有任何测试**（无 `src/test`）。改动后必须：双分支构建 + 启动一次看日志（`reg success` / `Started XlineApp` / 无 ERROR）。
-- 版本 `1.0.0` 来自根 POM 的 `<revision>`，改版本只改这一处。
-- 不使用 Maven Wrapper，不生成 `mvnw`。
-- **`xline-app` 的构建目录被覆写为根目录 `target`，产物名固定 `xline.jar`**（`xline-app/pom.xml` 的 `<directory>` / `<finalName>`）。
-  其余模块仍在各自模块下的 `target`；`xline-app/target` 不再生成。两个分支共用同一路径，切分支即覆盖。
+- 仓库没有 `src/test`；改动后必须完成双分支构建，并至少启动一次，确认出现 `reg success` / `Started XlineApp` 且无 `ERROR`。
+- `xline-app` 是非 Web 应用，不提供页面或 HTTP 接口；产物固定为根目录 `target/xline.jar`，切换分支会覆盖它。
+- 版本只改根 POM 的 `<revision>`；不用 Maven Wrapper，不生成 `mvnw`。
 
-## 架构速查
+## 核心模型
 
 | 层 | 关键类 | 职责 |
 | --- | --- | --- |
-| core | `Node` / `INode` | 配置绑定载体 + 生命周期模板（`init` / `destroy` / `receiveData` / `pushMsg`）；可配置项只有 `name` / `type` / `extra` 与类型段 |
-| core | `AbstractNodeAutoConfiguration<N,H>` | 装配模板：筛选 → 拷贝 → 匹配处理器 → `beforeInit` → 初始化 → 登记 |
-| core | `XLineContext` | `NODES` / `DATA_SOURCES` 注册表、`pushMsg(节点名, data)`（底层路由 API，业务不用） |
-| core | `XLineEventHandler` / `XLineDispatcher` | Disruptor 唯一消费者只按 `struct` 路由；`XLineDispatcher` 为每个下游节点维护待处理队列，在工作线程池中异步执行（节点内串行、节点间并行） |
-| core | `XLineRoutingDataSource` | 实现 `javax.sql.DataSource`，按 `NodeContext` 路由 |
-| 节点模块 | `XxxNode` + `XxxNodeAutoConfiguration` + `XxxDataHandler` | 只声明 `nodeType()` / `nodeClass()` / `handlerClass()` |
-| app | `XlineApp` / `XLineOverviewController` | 启动、运行概览页面 `/` 与接口 `/api/xline/overview`；展示配置须脱敏 |
+| core | `Node` / `INode` | 配置绑定、生命周期与 `pushMsg` |
+| core | `AbstractNodeAutoConfiguration<N,H>` | 筛选、复制、匹配处理器、初始化、登记 |
+| core | `XLineContext` | 节点/数据源注册表与底层按名路由 API |
+| core | `XLineEventHandler` / `XLineDispatcher` | Disruptor 路由、节点队列和异步执行 |
+| core | `XLineRoutingDataSource` | 按 `NodeContext` 路由 `javax.sql.DataSource` |
+| 节点模块 | `XxxNode` / `XxxNodeAutoConfiguration` / `XxxDataHandler` | 类型资源、装配声明与数据处理 |
+| app | `XlineApp` | 非 Web 启动与运行验证 |
 
-节点自推：`node.pushMsg(data)`（`INode` 契约方法，节点已自带名字与上下文，无节点名参数）；链路内部与业务一律用它，不要自行持有 `XLineContext`。
-`XLineContext.pushMsg(节点名, data)` 是按名注入事件总线的底层路由 API，节点名即 `struct` 的路由键，不能去掉。
-节点在 `ApplicationReadyEvent` 初始化（晚于 `CommandLineRunner`）。
-总线消费线程与工作线程都不得阻塞等待：反压只在外部生产者（非工作线程）的 `pushMsg` 中等待；JDK 21 下阻塞 IO 外不要包 `synchronized`（会占住虚拟线程的载体线程），用 `ReentrantLock`。
+- 业务和链路内部统一调用 `node.pushMsg(data)`；`XLineContext.pushMsg(节点名, data)` 只用于底层按 `struct` 注入。
+- 节点在 `ApplicationReadyEvent` 初始化，晚于 `CommandLineRunner`。
+- 总线消费线程和工作线程不得阻塞等待。反压只允许外部生产者等待；JDK 21 的阻塞 IO 外避免 `synchronized`，使用 `ReentrantLock`。
 
-## 红线
+## 强制约束
 
-1. **Java 8 语法**：`src/main/java` 与 `src/main/java-jdk8` 禁用 `var`、`record`、文本块、switch 表达式、`List.of/Map.of`、`Stream.toList()`、`instanceof` 模式匹配。
-2. **core 不含数据库依赖**：Druid、anyline、Flyway、spring-jdbc、ORM 只能出现在具体节点模块；core 只用 `javax.sql.DataSource`。
-3. **基础依赖只在 core 声明**：Netty、Hutool、Fastjson2、Guava、Disruptor；版本统一在根 POM `dependencyManagement`，子模块不写 `<version>`。
-4. **版本占位符**：子模块 `parent.version` 与模块间依赖一律 `${revision}`，靠 `flatten-maven-plugin` 在 install 时展开（删掉它会让下游解析失败）。
-5. **配置段 setter 必须判空**：
-   ```java
-   public void setHttp(HttpProperties http) {
-       this.http = http;
-       if (http != null) { this.type = bindType(NodeType.HTTP); }   // 漏判空 → 类型被最后一个段覆盖
-   }
-   ```
-   `BeanUtil.copyProperties` 会以 `null` 调用未配置段的 setter。
-6. **不创建** `META-INF/spring.factories` 与 `AutoConfiguration.imports`：全部走组件扫描 + `@ConfigurationPropertiesScan`。
-7. **`application.yml` 必须保留** `spring.flyway.enabled: false`，否则 jdk8 分支启动即失败（Flyway 抢在节点就绪前取路由数据源连接）。
-8. **分支差异靠属性，不靠代码分支**：`${web.starter.artifactId}`、`${mybatis-plus.starter.artifactId}` 由 profile 切换；
-   Forest 自 1.8.0 起所有 SpringBoot 分支共用 `forest-spring-boot-starter`，不再切换。
-9. 构造器注入；不直接用 `ObjectMapper`（Jackson 2 仅为 anyline 运行期）；不引入 JPA / Bean Validation 等命名空间迁移件。
-10. **`Node` 的运行期字段不得生成 `getXxx` / `setXxx`**：`dataHandler` / `context` 一律标注 `@Getter(AccessLevel.NONE)` + `@Setter(AccessLevel.NONE)`，读取走 `dataHandler()` / `context()`，注入走 `attach(handler, context)`。
-    ```java
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    private transient XLineContext context;   // 写成 @Data 默认访问器 → 被绑定器当成可配置项
-    ```
-    配置绑定器只识别 `setXxx`，生成 setter 就等于把运行期状态暴露成配置项。
-11. **类型配置段可选，节点实现必须容忍它为 null**：允许只写 `type: http` 不写 `http` 段（参考 `HttpClients.create` 兜底 `new HttpProperties()`）；
-    只有真正用到必填字段时才报错（`HttpNode.url` 用 `Assert.notNull` 给出明确提示，不要抛 NPE）。
-12. **资源归节点所有**：销毁只关闭自身客户端/连接；`Node.init()` 失败会调用 `destroyDataSource()`，释放方法须容忍未初始化或重复调用。
-13. **不使用废弃 API**：Redisson 认证用 `Config.setUsername/setPassword`，Forest 重试用 `get/setMaxRetryCount`；构建加 `-Dmaven.compiler.showDeprecation=true` 检查。
+1. 公共源码和 `java-jdk8` 仅用 Java 8 语法/API：禁用 `var`、`record`、文本块、switch 表达式、`List.of/Map.of`、`Stream.toList()`、模式匹配。
+2. core 不引入数据库实现；Druid、AnyLine、Flyway、spring-jdbc、ORM 只放具体数据库模块。Netty、Hutool、Fastjson2、Guava、Disruptor 只由 core 声明。
+3. 第三方版本统一放根 POM `dependencyManagement`；子模块 parent 与模块间依赖使用 `${revision}`，保留 `flatten-maven-plugin`。
+4. 类型配置段 setter 必须判空后再绑定类型；`BeanUtil.copyProperties` 会以 `null` 调用未配置段 setter。
+5. 不创建 `META-INF/spring.factories` 或 `AutoConfiguration.imports`；使用组件扫描和 `@ConfigurationPropertiesScan`。
+6. `application.yml` 必须保留 `spring.flyway.enabled: false`；迁移由数据库节点按自身 `flyway` 开关执行。
+7. 分支差异用 profile 属性解决；Forest 两分支统一使用 `forest-spring-boot-starter`。
+8. 使用构造器注入；不直接使用 `ObjectMapper`；不引入 JPA、Bean Validation 等命名空间迁移依赖。
+9. `Node` 的 `dataHandler` / `context` 必须禁用 Lombok getter/setter，读取走 `dataHandler()` / `context()`，注入走 `attach(...)`，避免暴露为配置项。
+10. 类型配置段可省略；节点只在真正使用必填字段时给出明确错误，不能因配置段为 `null` 抛 NPE。
+11. 资源归节点所有；初始化失败、未初始化和重复销毁都必须安全。
+12. 不使用废弃 API；需要时以 `-Dmaven.compiler.showDeprecation=true` 构建检查。
 
-## MQTT / Redis / 嵌入式数据库
+## 数据库与外部资源
 
-- 配置段：`mqtt` / `redis` / `h2` / `duckdb`，用法与示例见 README、`demo/`。
-- MQTT 仅 v5；收到消息以 `MqttEnvelope` 推向下游，发布走 `node.publish()`；重连回调中禁止阻塞等待订阅确认。
-- Redis 内联配置由 Boot 绑定；`config-location` 则由 Redisson 读取原生 YAML，连接配置不与内联合并；资源用流读取，不能依赖 `getFile()`。
-- 两分支共用 Redisson 4.8、SnakeYAML 2.7；后者由根 POM 管理，避免 Boot 2 默认 1.x 导致 Redisson YAML 加载失败。
-- H2 接入 Druid / AnyLine / 路由数据源 / 可选 Flyway；DuckDB 只持有独立 JDBC 连接，不接入上述注册表和迁移。
+- 接入 Druid 的关系型节点继承 `JdbcProperties`（网络库用 `JdbcServerProperties`），复用连接池、连接属性和 Flyway 配置。
+- MQTT 仅 v5，接收以 `MqttEnvelope` 下推，发布走 `node.publish()`；重连回调不能阻塞等待订阅确认。
+- Redis 的 `config-location` 由 Redisson 原生读取，不与内联配置合并；资源必须用流读取，不能依赖 `getFile()`。
+- H2 接入 Druid / AnyLine / 路由数据源 / 可选 Flyway；DuckDB 只持有独立 JDBC 连接。
 
-## 新增一种节点类型
+## 新增节点类型
 
-1. core：`NodeType` 加枚举项 + `com.csf.xline.core.<类型>.XxxProperties`，并在 `Node` 加字段与判空 setter（字段须用 `@Data` 默认访问器，运行期字段才用 `AccessLevel.NONE`）；
-   接入 Druid 的关系型库继承 `core.jdbc.JdbcProperties`（网络库用 `JdbcServerProperties`），复用 `pool` / `connection-properties` / Flyway 配置；
-2. 新建模块：只引入该类型需要的依赖（数据库模块才引驱动、Druid、Flyway、anyline）；
-3. `XxxNode extends Node`：只实现 `initDataSource()` / `destroyDataSource()`；
-4. `XxxNodeAutoConfiguration extends AbstractNodeAutoConfiguration<XxxNode, XxxDataHandler>`：三个类型方法 + 构造器透传 `(XLineProperties, XLineContext)`（上下文明文地由装配模板统一注入）；需要额外运行期依赖时覆写 `beforeInit()`（参考 tcp 注入线程工厂、http 注入全局 ForestConfiguration）；
-5. `XxxDataHandler extends DataHandler<XxxNode>`：`init` / `rec` / `destroy` 三个方法都要实现（无默认实现）；
-6. 根 POM 的 `<modules>`、`dependencyManagement` 同步，`xline-app` 按需引入。
+1. core 增加 `NodeType`、`XxxProperties`，并在 `Node` 增加字段和判空 setter。
+2. 新模块只引入该类型所需依赖，并同步根 POM 的 `<modules>` 与 `dependencyManagement`。
+3. `XxxNode` 实现资源初始化/销毁；`XxxDataHandler` 实现 `init` / `rec` / `destroy`。
+4. `XxxNodeAutoConfiguration` 声明 `nodeType()` / `nodeClass()` / `handlerClass()`，构造器透传 `(XLineProperties, XLineContext)`；额外运行期依赖放在 `beforeInit()`。
+5. `xline-app` 按需引入模块。同一 `NodeType` 的多个实现会跳过已登记同名节点并告警。
 
-同类多模块（如 SQL Server 的 jTDS / mssql-jdbc）处理同一 `NodeType` 时，装配模板会跳过已登记的同名节点并告警，不会重复建连。
-
-## 资源与目录
+## 目录约定
 
 | 位置 | 内容 |
 | --- | --- |
-| `src/main/java` / `java-jdk8` / `java-jdk21` | 公共 / 分支专属源码，同一时刻只编译一个专属目录 |
-| `xline-app/src/main/resources/application.yml` | 仅框架级配置（必含 `spring.flyway.enabled: false`），不含节点 |
-| `demo/*.yml` | 测试用节点与 `struct` 配置；`java -jar target/xline.jar --spring.config.additional-location=file:./demo/<文件>.yml` 叠加（附加位置优先级更高，整段覆盖 `xline.nodes`） |
-| `xline-app/src/main/resources/logback-xline.xml` | 日志配置；`<conversionRule>` 用 `converterClass`，写成 `class` 会导致启动失败 |
-| `classpath:<数据库类型>/<节点名>` | Flyway 脚本目录（仅 `flyway: true` 的节点执行） |
-| `doc/` | 架构图产物 |
-| `.archify/` | 架构图源 JSON（已 gitignore） |
-
-## 已知环境坑
-
-- **Windows + archify**：`finalize` / `deliver` 的 sidecar 写入会误判硬链接（`links: 2`）而失败；改用 `render` 出产物，再单独 `check` / `browser-check`。
-- **架构图源码链接**：仓库无 commit 时无法 pin `revision`，`meta.repository` 与组件 `sources` 必须留空。
-- **IDE**：`src/main/java-jdk21` 需手动标记 Sources Root（不影响命令行构建）。
+| `src/main/java` / `java-jdk8` / `java-jdk21` | 公共与分支专属源码 |
+| `xline-app/src/main/resources/application.yml` | 框架配置；不放节点 |
+| `demo/*.yml` | 节点与 `struct` 示例，通过 `--spring.config.additional-location` 叠加 |
+| `classpath:<数据库类型>/<节点名>` | 启用 Flyway 时的脚本目录 |
+| `.archify/` / `doc/` | 架构图源与导出产物 |

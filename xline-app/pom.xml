@@ -15,18 +15,9 @@
     <description>可启动应用模块：用于运行验证节点初始化与数据流推送</description>
 
     <dependencies>
-        <!--
-            Web MVC：SpringBoot 4 起 starter 更名为 spring-boot-starter-webmvc，
-            2.7 仍为 spring-boot-starter-web，由 ${web.starter.artifactId} 按分支切换。
-        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>${web.starter.artifactId}</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+            <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
         <dependency>

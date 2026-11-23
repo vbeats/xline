@@ -4,7 +4,9 @@
 各节点按配置条件化初始化；同时支持 **JDK 1.8**（SpringBoot 2.7）与 **JDK 21**（SpringBoot 4.1），
 由 Maven profile 按运行 JDK 自动切换。
 
-架构图：[doc/xline-architecture.html](doc/xline-architecture.html)（可交互，支持暗/亮主题）
+![xline 架构图](doc/xline-architecture.png)
+
+交互版：[doc/xline-architecture.html](doc/xline-architecture.html)（支持暗/亮主题）
 
 ## 模块
 
@@ -24,7 +26,7 @@
 | `xline-redis` | Redis 节点（Redisson，内联或外部 YAML 配置） |
 | `xline-db-h2` | H2 节点（Druid、AnyLine、可选 Flyway） |
 | `xline-db-duckdb` | DuckDB 节点（独立 JDBC 连接） |
-| `xline-app` | 启动应用与运行概览（端口 10010，页面 `/`、接口 `/api/xline/overview`） |
+| `xline-app` | 轻量启动应用，用于装配节点并运行数据流（非 Web 应用） |
 
 **不引入某个节点模块，对应类型的节点就永远不会被初始化**；SQL Server 的两个驱动模块二选一引入。
 
@@ -33,7 +35,7 @@
 ```bash
 mvn clean install -DskipTests                    # 按当前 JDK 自动选分支
 mvn -P '!jdk21,jdk8' clean install -DskipTests   # 强制 jdk8 分支（两个 profile 互斥）
-java -jar target/xline.jar     # 启动，默认端口 10010
+java -jar target/xline.jar     # 启动非 Web 应用
 ```
 
 运行包固定输出到**工程根目录**的 `target/xline.jar`（`xline-app` 的构建目录被覆写，模块自身不再生成 `target`），
@@ -42,7 +44,6 @@ java -jar target/xline.jar     # 启动，默认端口 10010
 启动日志示例：
 
 ```
-Tomcat started on port 10010
 【DataSource - SQLite】reg success: local
 Started XlineApp in 2.3 seconds
 ```

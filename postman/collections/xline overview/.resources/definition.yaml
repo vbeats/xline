@@ -1,7 +1,0 @@
-$kind: collection
-name: xline Overview API
-description: Read-only contract for the xline Thymeleaf dashboard.
-variables:
-  - key: base_url
-    value: 'http://localhost:10010'
-    description: Local xline application URL.

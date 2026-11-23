@@ -53,12 +53,6 @@
         <!-- JDK 专属源码目录名：src/main/${jdk.source.dir}，由 profile 决定加入哪一个 -->
         <jdk.source.dir>java-jdk21</jdk.source.dir>
 
-        <!--
-            Web MVC starter 名称：SpringBoot 4 模块化后更名为 spring-boot-starter-webmvc，
-            SpringBoot 2.7 仍为 spring-boot-starter-web，由 profile 按分支切换。
-        -->
-        <web.starter.artifactId>spring-boot-starter-webmvc</web.starter.artifactId>
-
         <!-- ==================== 依赖版本（对齐 vline 各自分支的最新线） ==================== -->
         <mybatis-plus.version>3.5.18.1</mybatis-plus.version>
         <!-- MyBatis-Plus starter 名称：SpringBoot 4.x 需专用 starter，由 profile 切换 -->
@@ -430,8 +424,6 @@
                 <spring-boot.version>2.7.18</spring-boot.version>
                 <maven.compiler.release>8</maven.compiler.release>
                 <jdk.source.dir>java-jdk8</jdk.source.dir>
-                <!-- SpringBoot 2.7 的 Web starter 仍名为 spring-boot-starter-web -->
-                <web.starter.artifactId>spring-boot-starter-web</web.starter.artifactId>
                 <!-- 该分支取仍支持 Java 8 的最新版本线 -->
                 <anyline.version>8.7.6-20261020</anyline.version>
                 <disruptor.version>3.4.4</disruptor.version>
@@ -465,8 +457,6 @@
                 <spring-boot.version>4.1.3</spring-boot.version>
                 <maven.compiler.release>21</maven.compiler.release>
                 <jdk.source.dir>java-jdk21</jdk.source.dir>
-                <!-- SpringBoot 4 模块化后 Web MVC starter 更名为 spring-boot-starter-webmvc -->
-                <web.starter.artifactId>spring-boot-starter-webmvc</web.starter.artifactId>
                 <anyline.version>17.7.6-20261020</anyline.version>
                 <!-- anyline 运行期依赖 Jackson 2 线，SpringBoot 4.x 只带 Jackson 3，此处补齐 -->
                 <jackson.version>2.22.4</jackson.version>
