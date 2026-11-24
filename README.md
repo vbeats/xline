@@ -19,6 +19,7 @@
 | `xline-db-sqlite` | SQLite 节点 |
 | `xline-db-sqlserver-msssql` | SQL Server 节点（mssql-jdbc 驱动） |
 | `xline-db-sqlserver-jtds` | SQL Server 节点（jTDS 驱动） |
+| `xline-db-oracle` | Oracle 节点（驱动按分支切换：jdk8 分支 ojdbc8 21.x 支持 11g(11.2.0.4)+，jdk21 分支 ojdbc11 23.x 支持 19c+） |
 | `xline-tcp` | TCP 节点（JDK socket） |
 | `xline-http` | HTTP 节点（Forest） |
 | `xline-serial-port` | 串口节点（jSerialComm，232 / 485） |
@@ -158,6 +159,7 @@ SQLite 配置段整体可省略（只写 `type: sqlite`），默认库文件 `xl
 | SQLite | — | `sqlite`（字段 `db-path`，支持 `:memory:`） | `SqliteDataHandler` |
 | SQL Server（mssql-jdbc） | 1433 | `mssql` | `MssqlDataHandler` |
 | SQL Server（jTDS） | 1433 | `mssql` | `JtdsDataHandler` |
+| Oracle（11g+） | 1521 | `oracle` | `OracleDataHandler` |
 | H2 | — | `h2` | `H2DataHandler` |
 | DuckDB | — | `duckdb` | `DuckdbDataHandler` |
 
@@ -168,6 +170,9 @@ SQL Server 额外支持 `instance`（实例名）、`domain`（域认证）、`e
 | --- | --- |
 | `xline-db-sqlserver-msssql` | `jdbc:sqlserver://host:1433;databaseName=db;encrypt=false;...` |
 | `xline-db-sqlserver-jtds` | `jdbc:jtds:sqlserver://host:1433/db` |
+
+Oracle 额外支持 `service-name`（服务名，拼为 `jdbc:oracle:thin:@//host:port/service`，12c+ 常用）；
+未配置时以 `database-name` 作为 SID 拼为 `jdbc:oracle:thin:@host:port:SID`（11g 常用）。
 
 除 DuckDB 外，数据库节点的数据源对外有两种用法：
 

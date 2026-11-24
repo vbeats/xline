@@ -10,6 +10,9 @@ import org.springframework.util.Assert;
  */
 @Data
 public class JdbcPoolProperties {
+    /** 默认连接校验 SQL；个别数据库（如 Oracle）不接受该写法，由各自配置段替换为合法语句 */
+    public static final String DEFAULT_VALIDATION_QUERY = "select 1";
+
     /** 初始连接数 */
     private int initialSize = 5;
     /** 最小空闲连接数 */
@@ -19,7 +22,7 @@ public class JdbcPoolProperties {
     /** 获取连接的最长等待（毫秒） */
     private long maxWaitMillis = 60000L;
     /** 连接校验 SQL */
-    private String validationQuery = "select 1";
+    private String validationQuery = DEFAULT_VALIDATION_QUERY;
     /** 连接校验超时（秒） */
     private int validationQueryTimeoutSeconds = 3;
     /** 借出时校验 */

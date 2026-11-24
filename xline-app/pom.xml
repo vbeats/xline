@@ -49,6 +49,10 @@
         </dependency>
         <dependency>
             <groupId>com.csf.xline</groupId>
+            <artifactId>xline-db-oracle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.csf.xline</groupId>
             <artifactId>xline-tcp</artifactId>
         </dependency>
         <dependency>

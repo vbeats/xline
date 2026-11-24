@@ -1,0 +1,15 @@
+# Oracle 节点测试配置（11g+ 均适用）
+# 启动：java -jar target/xline.jar --spring.config.additional-location=file:./demo/oracle-test.yml
+xline:
+  nodes:
+    - name: ora1
+      oracle:
+        host: 127.0.0.1
+        port: 1521
+        # 服务名与 SID 二选一：service-name 配置后 database-name 不参与拼装；
+        # 11g 及旧部署通常只识别 SID 形态
+        database-name: orcl
+        # service-name: orcl.example.com
+        username: scott
+        password: tiger
+        flyway: false

@@ -36,4 +36,25 @@
             <artifactId>anyline-data-jdbc-mysql</artifactId>
         </dependency>
     </dependencies>
+
+    <!--
+        Flyway 10 起按数据库拆分：jdk21 分支（Flyway 13）需显式引入 MySQL 模块；
+        jdk8 分支（Flyway 9）对应支持内置于 flyway-core，无需额外依赖。
+        与根 POM 同名的 jdk21 profile：'-P !jdk21,jdk8' 强制 jdk8 分支时按 ID 一并禁用本模块，
+        避免 JDK 21 上强制跨分支构建时误引 Flyway 13 的按库模块。
+    -->
+    <profiles>
+        <profile>
+            <id>jdk21</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.flywaydb</groupId>
+                    <artifactId>flyway-mysql</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

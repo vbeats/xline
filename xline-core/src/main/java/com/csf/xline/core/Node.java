@@ -8,6 +8,7 @@ import com.csf.xline.core.redis.RedisProperties;
 import com.csf.xline.core.handler.DataHandler;
 import com.csf.xline.core.mssql.MssqlProperties;
 import com.csf.xline.core.mysql.MysqlProperties;
+import com.csf.xline.core.oracle.OracleProperties;
 import com.csf.xline.core.postgres.PostgresProperties;
 import com.csf.xline.core.serialport.SerialPortProperties;
 import com.csf.xline.core.sqlite.SqliteProperties;
@@ -60,6 +61,8 @@ public class Node implements INode {
     private SqliteProperties sqlite;
 
     private MssqlProperties mssql;
+
+    private OracleProperties oracle;
 
     private TcpProperties tcp;
 
@@ -130,6 +133,13 @@ public class Node implements INode {
         this.mssql = mssql;
         if (mssql != null) {
             this.type = bindType(NodeType.MSSQL);
+        }
+    }
+
+    public void setOracle(OracleProperties oracle) {
+        this.oracle = oracle;
+        if (oracle != null) {
+            this.type = bindType(NodeType.ORACLE);
         }
     }
 

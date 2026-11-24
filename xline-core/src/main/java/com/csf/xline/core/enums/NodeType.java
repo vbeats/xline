@@ -20,6 +20,9 @@ public enum NodeType {
     /** SQL Server */
     MSSQL("mssql"),
 
+    /** Oracle */
+    ORACLE("oracle"),
+
     /** TCP：以 socket 收发数据的节点 */
     TCP("tcp"),
 

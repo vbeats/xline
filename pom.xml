@@ -23,6 +23,7 @@
         <module>xline-db-sqlite</module>
         <module>xline-db-sqlserver-jtds</module>
         <module>xline-db-sqlserver-msssql</module>
+        <module>xline-db-oracle</module>
         <module>xline-tcp</module>
         <module>xline-http</module>
         <module>xline-serial-port</module>
@@ -64,6 +65,13 @@
         <postgresql.version>42.7.14</postgresql.version>
         <sqlite.version>3.54.1.0</sqlite.version>
         <sqlserver.version>13.6.2.jre11</sqlserver.version>
+        <!--
+            Oracle 驱动：artifact 与版本均按分支拆分——
+            jdk21 分支 ojdbc11 23.x 线最新（官方互操作矩阵仅支持连接 19c+ 服务端）；
+            jdk8 分支 ojdbc8 21.x 线最新（兼容 JDK 8/11 与 11.2.0.4+ 服务端，保留 11g 连接能力）。
+        -->
+        <oracle.artifactId>ojdbc11</oracle.artifactId>
+        <oracle.version>23.26.4.0.0</oracle.version>
         <jtds.version>1.3.1</jtds.version>
         <h2.version>2.5.252</h2.version>
         <duckdb.version>2.0.1.0</duckdb.version>
@@ -130,6 +138,11 @@
             <dependency>
                 <groupId>com.csf.xline</groupId>
                 <artifactId>xline-db-sqlserver-msssql</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.csf.xline</groupId>
+                <artifactId>xline-db-oracle</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -221,6 +234,32 @@
                 <artifactId>flyway-core</artifactId>
                 <version>${flyway.version}</version>
             </dependency>
+            <!--
+                Flyway 10 起按数据库拆分，以下四个模块仅在 jdk21 分支（Flyway 13）
+                由各数据库模块的同名 profile 引入，jdk8 分支（Flyway 9）不会解析它们；
+                jdk8 分支的对应数据库支持内置于 flyway-core。
+                SQLite 与 H2 在两个版本的 flyway-core 中均内置支持，无需单独模块。
+            -->
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-mysql</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-oracle</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-sqlserver</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.mysql</groupId>
                 <artifactId>mysql-connector-j</artifactId>
@@ -240,6 +279,12 @@
                 <groupId>com.microsoft.sqlserver</groupId>
                 <artifactId>mssql-jdbc</artifactId>
                 <version>${sqlserver.version}</version>
+            </dependency>
+            <!-- Oracle JDBC 驱动，artifact 与版本均由分支 profile 切换（jdk21: ojdbc11 23.x / jdk8: ojdbc8 21.x） -->
+            <dependency>
+                <groupId>com.oracle.database.jdbc</groupId>
+                <artifactId>${oracle.artifactId}</artifactId>
+                <version>${oracle.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.sourceforge.jtds</groupId>
@@ -322,6 +367,11 @@
             <dependency>
                 <groupId>org.anyline</groupId>
                 <artifactId>anyline-data-jdbc-mssql</artifactId>
+                <version>${anyline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-data-jdbc-oracle</artifactId>
                 <version>${anyline.version}</version>
             </dependency>
         </dependencies>
@@ -433,6 +483,8 @@
                 <!-- sqlite-jdbc 3.42+ 起要求 Java 11+，Java 8 线停在 3.41.x -->
                 <sqlite.version>3.41.2.2</sqlite.version>
                 <sqlserver.version>13.6.2.jre8</sqlserver.version>
+                <oracle.artifactId>ojdbc8</oracle.artifactId>
+                <oracle.version>21.24.0.0</oracle.version>
                 <h2.version>2.2.224</h2.version>
                 <mybatis-plus.starter.artifactId>mybatis-plus-boot-starter</mybatis-plus.starter.artifactId>
             </properties>
